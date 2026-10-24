@@ -137,6 +137,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private GlassView glass;
     /** The focused dock icon's name, floating above it (dock_magnify); null when the view is absent. */
     private android.widget.TextView dockLabel;
+    /** The dock card the pill is naming, so a scroll can carry the pill with it. */
+    private View dockFocusCard;
     private View ambient;
     private TextView heroName;
     /** The top shelf: heroName, plus the cinematic shelf's "Last opened" line and dock position dots. */
@@ -153,7 +155,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
      * Full strength was built for a plain black home; over a photograph it repaints the whole picture a
      * different colour at every keypress. This keeps the hint of colour and leaves the wallpaper alone.
      */
-    private static final float AMBIENT_ALPHA = 0.4f;
+    private static final float AMBIENT_ALPHA = 0.18f;
     /** config.xml app_glow: the highlight takes the focused app's colour on every tile. */
     private boolean appGlow;
     /** config.xml glow_style: the shape setAmbient paints the glow mask in. */
@@ -465,6 +467,14 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         hiddenApps = new HashSet<>(cfg.hiddenApps);
 
         grid = findViewById(R.id.grid);
+        grid.addOnScrollListener(new RecyclerView.OnScrollListener() {
+            @Override
+            public void onScrolled(@NonNull RecyclerView rv, int dx, int dy) {
+                // The dock is parked by scrolling the grid, and that happens after focus lands: the pill
+                // has to come along rather than stay where the card used to be.
+                if (dockLabel != null && dockLabel.getAlpha() > 0f) positionDockLabel(false);
+            }
+        });
         rtlAppGrid = getResources().getBoolean(R.bool.rtl_app_grid);
         // Mirror only the app grid; the header and other locales keep their own layouts.
         grid.setLayoutManager(new GridLayoutManager(this, COLUMNS) {
@@ -1491,47 +1501,74 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
 
     /**
      * Puts the focused dock icon's name in a small pill directly above it, the way a dock names the icon
-     * under the pointer. The geometry comes from the adapter, which packed the row and so knows where the
-     * icon is going; reading it off the view would follow the magnify animation and drag the pill with it.
+     * under the pointer.
      */
-    private void showDockLabel(int position) {
+    private void showDockLabel(int position, View card) {
         if (dockLabel == null) return;
         String text = adapter.labelAt(position);
         if (text == null || text.isEmpty()) {
             hideDockLabel();
             return;
         }
+        // On a cold start focus arrives before the dock has been packed, and packDock bails while the tiles
+        // are still pre-layout, so there is nothing yet to position against.
+        if (!adapter.dockLabelReady()) {
+            dockLabel.post(() -> {
+                if (adapter.magnifiedDock(lastFocused)) showDockLabel(lastFocused, card);
+            });
+            return;
+        }
         dockLabel.setText(text);
+        dockFocusCard = card;
+        boolean up = dockLabel.getAlpha() > 0f;
+        dockLabel.animate().cancel();
+        // Sliding it in from the last icon would drag it across the screen the first time focus enters
+        // the dock, so it only slides once it is already showing.
+        positionDockLabel(up && animations && !reducedMotion);
+        if (!up) {
+            if (animations && !reducedMotion) dockLabel.animate().alpha(1f).setDuration(120).start();
+            else dockLabel.setAlpha(1f);
+        }
+    }
+
+    /**
+     * Places the pill above whichever dock icon has focus.
+     *
+     * <p>Read off the card rather than off the adapter's grid-space geometry, because the grid carries a
+     * large top padding and then scrolls to park the dock on it: a grid-relative Y is stale the moment it
+     * scrolls. The tiles pivot on their bottom edge, so that edge holds still under the zoom — take it and
+     * step up by the height the tile reaches at full magnification. The scroll listener calls this again as
+     * the dock settles, which is what the cold start needs: focus lands before the grid has scrolled at all.
+     */
+    private void positionDockLabel(boolean animate) {
+        View card = dockFocusCard;
+        if (dockLabel == null || card == null || card.getHeight() == 0) return;
         int unspec = View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED);
         dockLabel.measure(unspec, unspec);
         float pw = dockLabel.getMeasuredWidth(), ph = dockLabel.getMeasuredHeight();
 
-        // Grid coordinates to root coordinates.
+        int[] c = new int[2], rs = new int[2];
+        card.getLocationOnScreen(c);
+        root.getLocationOnScreen(rs);
+        float bottom = c[1] + card.getHeight() * card.getScaleY();
+        float y = bottom - card.getHeight() * AppAdapter.DOCK_MAGNIFY[0] - rs[1] - ph - 20f * density;
+
         int[] g = new int[2], r = new int[2];
         grid.getLocationInWindow(g);
         root.getLocationInWindow(r);
         float x = g[0] - r[0] + adapter.dockLabelX() - pw / 2f;
-        // Clear of the magnified icon, not just above its top edge: both the icon and the pill carry a
-        // glass rim, and at 16dp the two rims met on the focused tile.
-        float y = g[1] - r[1] + adapter.dockLabelTop() - ph - 34f * density;
         float edge = 12f * density;
         x = Math.max(edge, Math.min(x, root.getWidth() - pw - edge));
 
-        boolean up = dockLabel.getAlpha() > 0f;
-        dockLabel.animate().cancel();
-        if (!animations || reducedMotion || !up) {
-            // Not showing yet: place it, then fade in. Sliding it in from the last icon would drag it
-            // across the screen the first time focus enters the dock.
+        if (animate) {
+            dockLabel.animate().translationX(x).translationY(y).alpha(1f)
+                    .setDuration(AppAdapter.DOCK_MAGNIFY_MS)
+                    .setInterpolator(new android.view.animation.DecelerateInterpolator(1.5f))
+                    .start();
+        } else {
             dockLabel.setTranslationX(x);
             dockLabel.setTranslationY(y);
-            if (animations && !reducedMotion) dockLabel.animate().alpha(1f).setDuration(120).start();
-            else dockLabel.setAlpha(1f);
-            return;
         }
-        dockLabel.animate().translationX(x).translationY(y).alpha(1f)
-                .setDuration(AppAdapter.DOCK_MAGNIFY_MS)
-                .setInterpolator(new android.view.animation.DecelerateInterpolator(1.5f))
-                .start();
     }
 
     /** Takes the dock's name pill away when focus leaves the dock. */
@@ -1565,7 +1602,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                     glassShown = false;
                 }
             });
-            showDockLabel(position);
+            showDockLabel(position, card);
         } else {
             hideDockLabel();
         }

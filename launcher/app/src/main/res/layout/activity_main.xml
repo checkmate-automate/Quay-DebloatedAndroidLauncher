@@ -203,8 +203,8 @@
                         android:format24Hour="HH:mm"
                         android:textColor="#FFFFFFFF"
                         android:textSize="52sp"
-                        android:fontFamily="@string/font_light"
-                        android:letterSpacing="-0.04"
+                        android:fontFamily="@string/font_semibold"
+                        android:letterSpacing="-0.025"
                         android:includeFontPadding="false" />
 
                     <TextClock

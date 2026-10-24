@@ -243,6 +243,17 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     private int dockAnchor;
     /** Where packDock put the focused icon, in the grid's coordinates, for the floating name pill. */
     private float dockLabelX, dockLabelTop;
+    /**
+     * False until packDock has worked out where the <em>currently focused</em> icon landed. A pack that
+     * runs before focus reaches the dock leaves the label geometry at zero, so "a pack has happened" is
+     * not enough to position the pill against.
+     */
+    private boolean dockLabelReady;
+
+    /** True once dockLabelX/Top describe the focused icon. */
+    boolean dockLabelReady() {
+        return dockLabelReady;
+    }
 
     /** Centre of the focused dock icon once packed, in grid coordinates. */
     float dockLabelX() {
@@ -529,6 +540,7 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
      * @param focusedPos the focused dock position, or -1 when focus has left the dock.
      */
     void magnifyDock(int focusedPos) {
+        if (focusedPos != dockFocus) dockLabelReady = false;
         dockFocus = focusedPos;
         if (focusedPos >= 0) dockAnchor = focusedPos;
         packDock();
@@ -617,6 +629,7 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                 // does not chase the icon up the screen.
                 dockLabelX = cx;
                 dockLabelTop = restTop[i] + card.getHeight() * (1f - scale[i]);
+                dockLabelReady = true;
             }
             if (card.getBackground() instanceof GlassTile) {
                 // Screen position, not cell position: the tiles are translated into the packed row, and a
@@ -690,6 +703,7 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             // window would otherwise arrive in the grid still invisible and still offset.
             h.card.setTranslationX(0f);
             h.card.setAlpha(1f);
+            if (h.card.getForeground() instanceof GlassTile) h.card.setForeground(null);
             h.card.setScaleX(focused && animations ? focusScale() : 1f);
             h.card.setScaleY(focused && animations ? focusScale() : 1f);
         }
@@ -720,10 +734,15 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             h.label.setVisibility(View.GONE);
             // Inset on the glass rather than edge to edge: a lens needs a rim of itself showing to read
             // as glass at all, and the artwork still fills most of the tile.
-            sizeIcon(h.icon, Math.round(tileH * 0.80f), 0);
+            sizeIcon(h.icon, Math.round(tileH * 0.84f), 0);
             if (!(h.card.getBackground() instanceof GlassTile)) {
                 GlassTile.load(ctx, grid != null ? grid.getWidth() : 0, grid != null ? grid.getHeight() : 0);
-                h.card.setBackground(new GlassTile(dp));
+                h.card.setBackground(new GlassTile(dp, false));
+                // The gloss goes in front of the icon; a foreground is drawn after the children are.
+                h.card.setForeground(new GlassTile(dp, true));
+                if (h.card instanceof android.widget.FrameLayout) {
+                    ((android.widget.FrameLayout) h.card).setForegroundGravity(android.view.Gravity.FILL);
+                }
             }
         } else if (e.banner != null) {
             h.banner.setImageDrawable(e.banner);

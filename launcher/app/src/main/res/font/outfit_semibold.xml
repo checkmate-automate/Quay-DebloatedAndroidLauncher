@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Outfit at weight 600, built once per process, like the other weights here: setting
+     android:fontVariationSettings on a TextView instead rebuilds the variable font per view. -->
+<font-family xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+    <font
+        android:font="@font/outfit"
+        android:fontStyle="normal"
+        android:fontWeight="600"
+        android:fontVariationSettings="'wght' 600"
+        tools:targetApi="28" />
+</font-family>

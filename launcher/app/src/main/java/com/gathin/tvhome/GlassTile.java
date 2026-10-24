@@ -82,6 +82,12 @@ final class GlassTile extends Drawable {
     private final Paint lens = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint sheen = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint rim = new Paint(Paint.ANTI_ALIAS_FLAG);
+    /**
+     * True for the plate drawn in front of the artwork. Everything glassy drawn behind an opaque app icon
+     * only escapes at the rim, which reads as a frame around the icon rather than glass over it; the
+     * specular sweep and the rim therefore go in the card's foreground, across the artwork.
+     */
+    private final boolean overlay;
     private final Matrix matrix = new Matrix();
     private final RectF rect = new RectF();
     private final float density;
@@ -89,8 +95,9 @@ final class GlassTile extends Drawable {
     /** Where this tile sits on screen, so it samples the part of the picture actually behind it. */
     private float screenX, screenY;
 
-    GlassTile(float density) {
+    GlassTile(float density, boolean overlay) {
         this.density = density;
+        this.overlay = overlay;
         if (backdrop != null) {
             lens.setShader(new BitmapShader(backdrop, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP));
             lens.setFilterBitmap(true);
@@ -118,9 +125,10 @@ final class GlassTile extends Drawable {
         rim.setShader(new LinearGradient(0, b.top, 0, b.bottom,
                 new int[]{0x4DFFFFFF, 0x0FFFFFFF, 0x1FFFFFFF}, new float[]{0f, 0.55f, 1f},
                 Shader.TileMode.CLAMP));
-        // A soft wash down the face, so the glass has body rather than only edges.
-        sheen.setShader(new LinearGradient(0, b.top, 0, b.bottom,
-                new int[]{0x17FFFFFF, 0x05FFFFFF, 0x0DFFFFFF}, new float[]{0f, 0.6f, 1f},
+        // The highlight a dome of glass throws across whatever is under it: a diagonal sweep off the top
+        // left corner, gone by the middle of the face. This is what makes the artwork look covered.
+        sheen.setShader(new LinearGradient(b.left, b.top, b.right * 0.62f, b.bottom * 0.92f,
+                new int[]{0x33FFFFFF, 0x0DFFFFFF, 0x00FFFFFF}, new float[]{0f, 0.40f, 0.64f},
                 Shader.TileMode.CLAMP));
     }
 
@@ -136,7 +144,10 @@ final class GlassTile extends Drawable {
             matrix.postScale(LENS, LENS, rect.centerX(), rect.centerY());
             lens.getShader().setLocalMatrix(matrix);
         }
-        canvas.drawRoundRect(rect, radius, radius, lens);
+        if (!overlay) {
+            canvas.drawRoundRect(rect, radius, radius, lens);
+            return;
+        }
         canvas.drawRoundRect(rect, radius, radius, sheen);
         float inset = rim.getStrokeWidth() / 2f;
         rect.inset(inset, inset);
