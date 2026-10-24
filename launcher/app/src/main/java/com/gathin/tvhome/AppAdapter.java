@@ -720,7 +720,7 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             h.label.setVisibility(View.GONE);
             // Inset on the glass rather than edge to edge: a lens needs a rim of itself showing to read
             // as glass at all, and the artwork still fills most of the tile.
-            sizeIcon(h.icon, Math.round(tileH * 0.72f), 0);
+            sizeIcon(h.icon, Math.round(tileH * 0.80f), 0);
             if (!(h.card.getBackground() instanceof GlassTile)) {
                 GlassTile.load(ctx, grid != null ? grid.getWidth() : 0, grid != null ? grid.getHeight() : 0);
                 h.card.setBackground(new GlassTile(dp));

@@ -33,7 +33,7 @@ final class GlassTile extends Drawable {
     /** Width the blurred backdrop is reduced to. Small enough that the scaling up is the blur. */
     private static final int BACKDROP_W = 64;
     /** How much the glass magnifies what is behind it. 1.0 would be a window rather than a lens. */
-    private static final float LENS = 1.22f;
+    private static final float LENS = 1.10f;
 
     private static Bitmap backdrop;
     private static boolean loaded;
@@ -99,7 +99,7 @@ final class GlassTile extends Drawable {
             lens.setColor(0x26FFFFFF);
         }
         rim.setStyle(Paint.Style.STROKE);
-        rim.setStrokeWidth(1.4f * density);
+        rim.setStrokeWidth(1.1f * density);
     }
 
     /** The tile's top-left on screen. Set as the dock is packed, since the icons move as focus does. */
@@ -116,11 +116,11 @@ final class GlassTile extends Drawable {
         radius = AppAdapter.cornerRadius(b.width(), density);
         // Specular edge: bright along the top, almost gone by the bottom, as light catches a glass lip.
         rim.setShader(new LinearGradient(0, b.top, 0, b.bottom,
-                new int[]{0x8CFFFFFF, 0x1FFFFFFF, 0x3DFFFFFF}, new float[]{0f, 0.55f, 1f},
+                new int[]{0x4DFFFFFF, 0x0FFFFFFF, 0x1FFFFFFF}, new float[]{0f, 0.55f, 1f},
                 Shader.TileMode.CLAMP));
         // A soft wash down the face, so the glass has body rather than only edges.
         sheen.setShader(new LinearGradient(0, b.top, 0, b.bottom,
-                new int[]{0x2EFFFFFF, 0x0AFFFFFF, 0x1AFFFFFF}, new float[]{0f, 0.6f, 1f},
+                new int[]{0x17FFFFFF, 0x05FFFFFF, 0x0DFFFFFF}, new float[]{0f, 0.6f, 1f},
                 Shader.TileMode.CLAMP));
     }
 
