@@ -1511,7 +1511,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         grid.getLocationInWindow(g);
         root.getLocationInWindow(r);
         float x = g[0] - r[0] + adapter.dockLabelX() - pw / 2f;
-        float y = g[1] - r[1] + adapter.dockLabelTop() - ph - 16f * density;
+        // Clear of the magnified icon, not just above its top edge: both the icon and the pill carry a
+        // glass rim, and at 16dp the two rims met on the focused tile.
+        float y = g[1] - r[1] + adapter.dockLabelTop() - ph - 34f * density;
         float edge = 12f * density;
         x = Math.max(edge, Math.min(x, root.getWidth() - pw - edge));
 
