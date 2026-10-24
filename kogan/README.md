@@ -25,13 +25,16 @@ Switched on by `dock_magnify` in `config.xml`. Set it false and the stock tvOS d
 
 | | |
 |---|---|
-| Fire Stick | `com.mediatek.tvinput/.hdmi.HDMIInputService/HW7` (HDMI 3) |
+| Fire Stick | `com.mediatek.tvinput/.hdmi.HDMIInputService/HW8` (HDMI 4) |
 | ADB | `<tv-ip>:5555` |
 | Stock launcher | `com.google.android.tvlauncher` — disabled, **not** uninstalled |
 
-HDMI 3 reports `state: 1` (standby) even with the Fire Stick attached and a session open, so on this
-driver **standby does not mean empty** — only `state: 2` is really disconnected. CEC is useless here:
-`dumpsys hdmi_control` returns one power-status line, no device names.
+The Fire Stick is on **HDMI 4 / HW8**, not HDMI 3. HW8 is the only HDMI that ever reports `state: 0`;
+HW5, HW6 and HW7 sit at `state: 1` (standby) whether or not anything is attached, so on this driver
+**standby does not mean empty** and only `state: 2` is really disconnected. The passthrough URI opens a
+session on any of them regardless, which is why switching to HW7 "worked" while showing nothing. CEC
+cannot settle it either: `dumpsys hdmi_control` returns one power-status line and no device names, so
+the port state is the only signal, and `state: 0` is the one that identifies the live device.
 
 YouTube's main activity is not exported, so `am start -n` on it is denied. App launches must resolve
 through `queryIntentActivities` with `CATEGORY_LEANBACK_LAUNCHER`.
@@ -104,8 +107,8 @@ adb shell cmd package set-home-activity --user 0 com.google.android.tvlauncher/.
 | `DOCK_EDGE_SCALE` | `AppAdapter.java` | 0.86 — how far those shrink back |
 | `DOCK_STIFFNESS` | `AppAdapter.java` | 380 — spring speed; critically damped, no bounce |
 | `DOCK_GAP_DP` | `AppAdapter.java` | 12 — space between packed icons |
-| `AMBIENT_ALPHA` | `MainActivity.java` | 0.4 — focused app's colour wash over the wallpaper |
-| `columns` | `config.xml` | 13 — both the grid span count and the dock's slot count, and it sets icon size |
+| `AMBIENT_ALPHA` | `MainActivity.java` | 0.18 — focused app's colour wash over the wallpaper |
+| `columns` | `config.xml` | 8 — both the grid span count and the dock's slot count, and it sets icon size |
 
 No blur anywhere: `RenderEffect` is API 31 and this runs from 26, and upstream rules it out on 1 GB
 sets. Depth is carried by fade and scale instead.

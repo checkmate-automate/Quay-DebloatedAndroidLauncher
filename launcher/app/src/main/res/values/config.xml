@@ -21,7 +21,7 @@
          input instead, including a rename made in TV settings.
          App order follows measured use on this set (YouTube, Netflix and iview are the three in daily use). -->
     <string-array name="dock_apps">
-        <item>input:com.mediatek.tvinput/.hdmi.HDMIInputService/HW7=Fire TV</item>
+        <item>input:com.mediatek.tvinput/.hdmi.HDMIInputService/HW8=Fire TV</item>
         <item>com.google.android.youtube.tv</item>
         <item>com.netflix.ninja</item>
         <item>au.net.abc.iview</item>
