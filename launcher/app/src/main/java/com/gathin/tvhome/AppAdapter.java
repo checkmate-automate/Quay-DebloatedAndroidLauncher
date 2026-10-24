@@ -603,6 +603,8 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             cursor += w + gap;
         }
         float shift = grid.getWidth() / 2f - centre[middle];
+        int[] gridOnScreen = new int[2];
+        grid.getLocationOnScreen(gridOnScreen);
 
         for (int i = 0; i < dockSize; i++) {
             View card = cards[i];
@@ -615,6 +617,12 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                 // does not chase the icon up the screen.
                 dockLabelX = cx;
                 dockLabelTop = restTop[i] + card.getHeight() * (1f - scale[i]);
+            }
+            if (card.getBackground() instanceof GlassTile) {
+                // Screen position, not cell position: the tiles are translated into the packed row, and a
+                // lens that sampled its old cell would show the wrong part of the picture.
+                ((GlassTile) card.getBackground()).setScreenPos(
+                        gridOnScreen[0] + cx - card.getWidth() / 2f, gridOnScreen[1] + restTop[i]);
             }
             // Scale about the bottom centre: the icon rises out of the row, as a dock icon does, and the
             // bottoms stay on one line however large the focused one grows.
@@ -696,8 +704,12 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         float dp = ctx.getResources().getDisplayMetrics().density;
         // A dock icon is the whole tile, with no card drawn behind it: in a real dock the icons sit on the
         // background, and a rounded slab behind each one reads as a button instead.
-        h.card.setBackground(dockIcon || (e.banner != null && e.banner.getOpacity() == PixelFormat.OPAQUE)
-                ? null : h.cardBackground);
+        // A dock tile keeps the glass plate set below; a grid tile keeps its own card, except under an
+        // opaque banner that would cover it anyway.
+        if (!dockIcon) {
+            h.card.setBackground(e.banner != null && e.banner.getOpacity() == PixelFormat.OPAQUE
+                    ? null : h.cardBackground);
+        }
         if (dockIcon) {
             h.banner.setImageDrawable(null);
             h.banner.setVisibility(View.GONE);
@@ -706,7 +718,13 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             // No caption inside a dock tile: the focused tile's name is already shown above the dock (dock_title),
             // and four captions competing at once is what the stock row does.
             h.label.setVisibility(View.GONE);
-            sizeIcon(h.icon, tileH, 0);
+            // Inset on the glass rather than edge to edge: a lens needs a rim of itself showing to read
+            // as glass at all, and the artwork still fills most of the tile.
+            sizeIcon(h.icon, Math.round(tileH * 0.72f), 0);
+            if (!(h.card.getBackground() instanceof GlassTile)) {
+                GlassTile.load(ctx, grid != null ? grid.getWidth() : 0, grid != null ? grid.getHeight() : 0);
+                h.card.setBackground(new GlassTile(dp));
+            }
         } else if (e.banner != null) {
             h.banner.setImageDrawable(e.banner);
             h.banner.setVisibility(View.VISIBLE);
