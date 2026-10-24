@@ -615,7 +615,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         btnInputs = findViewById(R.id.btnInputs);
         View btnSettings = findViewById(R.id.btnSettings);
         btnInputs.setOnClickListener(v -> showInputs());
-        btnWifi.setOnClickListener(v -> openNetworkPill());
+        btnWifi.setOnClickListener(v -> showNetworkMenu());
         btnWifi.setOnLongClickListener(v -> {
             open(systemIntent(Settings.ACTION_WIFI_SETTINGS));
             return true;
@@ -625,11 +625,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             ((TextView) btnSettings).setText(R.string.launcher_settings);
             ((TextView) btnSettings).setCompoundDrawablesRelativeWithIntrinsicBounds(R.drawable.ic_home_settings_pill, 0, 0, 0);
         }
-        btnSettings.setOnClickListener(v -> {
-            if (launcherSettingsButton) startActivityForResult(
-                    new Intent(this, LauncherSettingsActivity.class), LAUNCHER_SETTINGS_REQUEST);
-            else open(systemIntent(Settings.ACTION_SETTINGS));
-        });
+        btnSettings.setOnClickListener(v -> showSettingsMenu());
         btnReorder = findViewById(R.id.btnReorder);
         btnReorder.setOnClickListener(v -> toggleReorder());
         btnReorder.setVisibility(cfg.reorderButton ? View.VISIBLE : View.GONE);
@@ -3075,14 +3071,56 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         rows.getChildAt(0).requestFocus();
     }
 
+    /**
+     * The Wi-Fi pill's own glass menu, matching the Inputs drop-down, instead of jumping straight into the
+     * system Wi-Fi screen. The first row names the network it is on, so the common question ("which network
+     * am I on?") is answered without leaving Home at all.
+     */
+    private void showNetworkMenu() {
+        View anchor = btnWifi;
+        View panel = getLayoutInflater().inflate(R.layout.popup_inputs, root, false);
+        LinearLayout rows = panel.findViewById(R.id.rows);
+        PopupWindow popup = glassPopup(panel, (int) (240 * density));
+
+        // With icon_only_buttons the network name lives in the talkback description, not the label.
+        CharSequence network = wifiIconOnly ? btnWifi.getContentDescription() : btnWifi.getText();
+        String name = TextUtils.isEmpty(network) ? getString(R.string.wifi) : network.toString();
+        addInputRow(rows, popup, R.drawable.ic_wifi, name, -1,
+                () -> open(systemIntent(Settings.ACTION_WIFI_SETTINGS)));
+        TextView status = rows.getChildAt(rows.getChildCount() - 1).findViewById(R.id.status);
+        status.setText(getString(R.string.quick_network));
+        status.setVisibility(View.VISIBLE);
+
+        // A VPN app, when one is configured, is the other thing this pill ever opened.
+        if (!vpnApp.isEmpty()) {
+            Intent vpn = getPackageManager().getLeanbackLaunchIntentForPackage(vpnApp);
+            if (vpn == null) vpn = getPackageManager().getLaunchIntentForPackage(vpnApp);
+            final Intent open = vpn;
+            if (open != null) {
+                addInputRow(rows, popup, R.drawable.ic_lock, getString(R.string.vpn), -1, () -> open(open));
+            }
+        }
+        addInputRow(rows, popup, R.drawable.ic_settings, getString(R.string.settings), -1,
+                () -> open(systemIntent(Settings.ACTION_SETTINGS)));
+
+        panel.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED);
+        popup.setWidth(Math.max((int) (240 * density), Math.min(panel.getMeasuredWidth(), (int) (360 * density))));
+        dropIn(popup, panel, anchor, getResources().getBoolean(R.bool.rtl_menu_bar) ? Gravity.START : Gravity.END);
+        rows.getChildAt(0).requestFocus();
+    }
+
     /** The header opens launcher settings directly; hold OK keeps the extra home actions available. */
     private void showSettingsMenu() {
         View anchor = findViewById(R.id.btnSettings);
         View panel = getLayoutInflater().inflate(R.layout.popup_inputs, root, false);
         LinearLayout rows = panel.findViewById(R.id.rows);
         PopupWindow popup = glassPopup(panel, (int) (200 * density));
-        if (!launcherSettingsButton) addSettingsMenuRow(rows, popup, R.string.launcher_settings, () -> startActivityForResult(
-                new Intent(this, LauncherSettingsActivity.class), LAUNCHER_SETTINGS_REQUEST));
+        // The button used to open one of these directly; it now drops the same glass menu the Inputs pill
+        // does, so the three top buttons behave alike.
+        addInputRow(rows, popup, R.drawable.ic_settings, getString(R.string.settings), -1,
+                () -> open(systemIntent(Settings.ACTION_SETTINGS)));
+        addInputRow(rows, popup, R.drawable.ic_home_settings_pill, getString(R.string.launcher_settings), -1,
+                () -> startActivityForResult(new Intent(this, LauncherSettingsActivity.class), LAUNCHER_SETTINGS_REQUEST));
         if (moduleCards) addSettingsMenuRow(rows, popup, R.string.module_cards, this::showModuleCards);
         if (dockRow) addSettingsMenuRow(rows, popup, R.string.dock_edit, this::startDockEdit);
         addSettingsMenuRow(rows, popup, R.string.reorder, this::toggleReorder);
