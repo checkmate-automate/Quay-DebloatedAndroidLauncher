@@ -15,6 +15,8 @@ import android.graphics.Outline;
 import android.graphics.PixelFormat;
 import android.graphics.Rect;
 import android.graphics.drawable.Drawable;
+import android.media.tv.TvInputInfo;
+import android.media.tv.TvInputManager;
 import android.net.Uri;
 import android.provider.Settings;
 import android.util.DisplayMetrics;
@@ -30,6 +32,9 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.dynamicanimation.animation.DynamicAnimation;
+import androidx.dynamicanimation.animation.SpringAnimation;
+import androidx.dynamicanimation.animation.SpringForce;
 import androidx.recyclerview.widget.RecyclerView;
 
 import java.util.ArrayList;
@@ -62,7 +67,7 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     }
 
     static final class Entry {
-        static final int APP = 0, HOME_SETTINGS = 1, CARD = 2, EMPTY = 3;
+        static final int APP = 0, HOME_SETTINGS = 1, CARD = 2, EMPTY = 3, INPUT = 4;
 
         final int kind;
         final String label;
@@ -72,6 +77,8 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         final Drawable icon;
         /** Text under the tile when it is focused in the grid: the label, plus the caption for a card. */
         final String name;
+        /** TV input id this tile switches to; null for every kind but INPUT. */
+        final String inputId;
         /** Ambient glow colour; 0 until sampled from the banner, or the card's accent from the start. */
         int ambient;
 
@@ -80,13 +87,21 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         }
 
         Entry(int kind, String label, ComponentName component, Drawable banner, Drawable icon, String caption, int accent) {
+            this(kind, label, component, banner, icon, caption, accent, null, component.getPackageName());
+        }
+
+        /** An INPUT tile: {@code key} is its dock_apps key, which stands in for a package so the dock and the
+         *  owner's saved order match it the same way they match an app. */
+        Entry(int kind, String label, ComponentName component, Drawable banner, Drawable icon, String caption,
+              int accent, String inputId, String key) {
             this.kind = kind;
             this.label = label;
             this.component = component;
-            this.pkg = component.getPackageName();
+            this.pkg = key;
             this.banner = banner;
             this.icon = icon;
             this.name = caption == null ? label : label + " \u00B7 " + caption;
+            this.inputId = inputId;
             this.ambient = accent;
         }
     }
@@ -94,6 +109,37 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     static final float FOCUS_SCALE = 1.10f;
     /** Design size of a tile (dp); tiles shrink from here when the columns don't fit, see tileWidthPx. */
     static final float DESIGN_W_DP = 180f, DESIGN_H_DP = 101f;
+
+    /**
+     * macOS dock magnification (dock_magnify): the focused dock tile, then its first and second neighbours;
+     * anything further stays at rest. A real dock ripples its neighbours, and leaving that out makes it read as
+     * an ordinary row that happens to zoom. Keeping the falloff to two keeps it one gesture rather than a wave.
+     */
+    static final float[] DOCK_MAGNIFY = {1.42f, 1.16f, 1.05f};
+    /** Magnified tiles grow up out of the row, as dock icons do, rather than through its floor. */
+    static final int DOCK_MAGNIFY_MS = 175;
+    /**
+     * Stiffness of the springs that carry a dock tile to its size and place. Springs rather than a
+     * timed animation because focus moves before the last move has settled: retargeting a spring keeps
+     * the tile's velocity, where restarting an animator throws it away and shows as a hitch.
+     */
+    static final float DOCK_STIFFNESS = 380f;
+    /** The glow an INPUT tile lights with: it has no banner for the launcher to sample a colour from. */
+    static final int INPUT_TILE_GLOW = 0xFFA9CCFF;
+    /** Space between two packed dock icons (dp). A dock reads as one object, so this stays small. */
+    static final float DOCK_GAP_DP = 12f;
+    /**
+     * Dock icons kept at full strength either side of the focused one, so the window shows 2 + 1 + 2 = five.
+     * Moving focus slides the row, bringing the next icon in and carrying the far one out.
+     */
+    static final int DOCK_WINDOW = 2;
+    /**
+     * How the icons just outside the window recede. Not a blur: RenderEffect needs API 31 and this launcher
+     * runs from API 26, and blur is ruled out anyway on a 1 GB TV. Fading and shrinking them costs nothing
+     * and reads the same at viewing distance.
+     */
+    static final float DOCK_EDGE_ALPHA = 0.28f;
+    static final float DOCK_EDGE_SCALE = 0.86f;
 
     /**
      * Tile width for a grid of this inner width: the cell minus room for the focus zoom and the glass
@@ -184,6 +230,30 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     private final boolean cinematic;
     /** Dock order (config.xml dock_apps, or a theme's config.json). */
     private final List<String> favourites;
+    /** config.xml dock_magnify: square dock icons that magnify with their neighbours, like a macOS dock. */
+    private final boolean dockMagnify;
+    /** Tile size onCreateViewHolder laid out, so a bind can square off a dock tile without measuring again. */
+    private int tileW, tileH;
+    /** The grid, for walking the dock's children when focus moves; null while detached. */
+    private RecyclerView grid;
+    /** Focused dock position, or -1 when focus is elsewhere; drives the magnification. */
+    private int dockFocus = -1;
+    /** The icon the window is centred on. Unlike dockFocus this keeps its value when focus leaves the dock,
+     *  so the row stays where the owner left it instead of snapping back to the first icon. */
+    private int dockAnchor;
+    /** Where packDock put the focused icon, in the grid's coordinates, for the floating name pill. */
+    private float dockLabelX, dockLabelTop;
+
+    /** Centre of the focused dock icon once packed, in grid coordinates. */
+    float dockLabelX() {
+        return dockLabelX;
+    }
+
+    /** Top edge the focused dock icon reaches once magnified, in grid coordinates. */
+    float dockLabelTop() {
+        return dockLabelTop;
+    }
+
     /** Grid apps fill the dock slots dock_apps leaves free (config.xml, fill_dock). */
     private final boolean fillDock;
     /** Dock apps found at the last reload, and the empty slots after them. */
@@ -215,6 +285,7 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         this.listener = listener;
         this.dockSize = dockSize;
         this.favourites = cfg.dockApps;
+        this.dockMagnify = ctx.getResources().getBoolean(R.bool.dock_magnify);
         this.fillDock = cfg.fillDock;
         this.hidden = new HashSet<>(cfg.hiddenApps);
         this.libraryPreload = new HashSet<>(cfg.libraryApps);
@@ -285,12 +356,27 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             if (banner == null) banner = loadBanner(pm, ri);
             // The icon is only drawn (and sampled for the glow) when there is no banner, so a tile with a
             // banner skips loading and decoding it.
-            Drawable icon = banner == null ? ri.loadIcon(pm) : null;
+            // A macOS dock tile shows the square icon, so with dock_magnify the icon is loaded even for an app
+            // that has a banner — the banner is a 16:9 wordmark and centre-cropping it to a square cuts it in half.
+            Drawable icon = banner == null || dockMagnify ? ri.loadIcon(pm) : null;
             if (card != null) {
                 fresh.add(new Entry(Entry.CARD, label, component, banner, icon, card.caption, card.accent));
             } else {
                 fresh.add(new Entry(label, component, banner, icon));
             }
+        }
+        // A dock_apps key of "input:<id>[=Label]" is a TV input (an HDMI port), not a package: it has no launch
+        // activity for the loop above to find, so its tile is built from TvInputManager. Sorting below places it
+        // by its key like any dock app, so the owner decides where in the dock it sits.
+        for (String key : favourites) {
+            String inputId = RemoteKeys.inputId(key);
+            if (inputId == null) continue;
+            String label = RemoteKeys.inputLabel(key);
+            if (label == null) label = inputName(inputId);
+            fresh.add(new Entry(Entry.INPUT, label,
+                    new ComponentName(ctx, "tv-input-" + inputId.replaceAll("[^A-Za-z0-9]", "_")),
+                    null, ctx.getDrawable(R.drawable.ic_input_tile), null,
+                    INPUT_TILE_GLOW, inputId, key));
         }
         Collections.sort(fresh, (a, b) -> {
             // The owner's own order first; tiles it does not know (new installs) follow by the rule below.
@@ -386,6 +472,8 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         int width = parent.getWidth() > 0 ? parent.getWidth() : parent.getMeasuredWidth();
         int inner = width - parent.getPaddingLeft() - parent.getPaddingRight();
         int w = tileWidthPx(inner, parent.getHeight(), dockSize, rowsBelowDock, dockTitle, dockRow, density), h = tileHeightPx(w);
+        tileW = w;
+        tileH = h;
         View card = v.findViewById(R.id.card);
         ViewGroup.LayoutParams cardLp = card.getLayoutParams();
         cardLp.width = w;
@@ -402,7 +490,152 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             v.setPadding(v.getPaddingLeft(), pad, v.getPaddingRight(), pad);
         }
         name.setLayoutParams(nameLp);
-        return new Holder(v, listener, animations, advancedEffects, reducedMotion, restNameAlpha, focusOvershoot);
+        return new Holder(v, listener, animations, advancedEffects, reducedMotion, restNameAlpha, focusOvershoot,
+                dockMagnify ? this : null);
+    }
+
+    @Override
+    public void onAttachedToRecyclerView(@NonNull RecyclerView rv) {
+        grid = rv;
+        // The pack is a transform over laid-out positions, so it has to be reapplied after every layout:
+        // a reload, a scroll that recycles a dock tile, or the first frame, which lays out at width 0.
+        rv.addOnLayoutChangeListener((v, l, t, r, b, ol, ot, orr, ob) -> rv.post(this::packDock));
+    }
+
+    @Override
+    public void onDetachedFromRecyclerView(@NonNull RecyclerView rv) {
+        if (grid == rv) grid = null;
+    }
+
+    /** Resizes a tile's icon, so a holder recycled between the dock and the grid carries the right one. */
+    private static void sizeIcon(View icon, int side, int bottomMargin) {
+        ViewGroup.MarginLayoutParams lp = (ViewGroup.MarginLayoutParams) icon.getLayoutParams();
+        if (lp.width == side && lp.bottomMargin == bottomMargin) return;
+        lp.width = side;
+        lp.height = side;
+        lp.bottomMargin = bottomMargin;
+        icon.setLayoutParams(lp);
+    }
+
+    /** True while this position is a dock tile the magnification drives, so its holder leaves its own zoom alone. */
+    boolean magnifiedDock(int position) {
+        return dockMagnify && dockRow && position >= 0 && position < dockSize;
+    }
+
+    /**
+     * Sizes every dock tile for the focused one: the focus itself largest, its neighbours less, the rest at
+     * rest. Pivoted on the tile's bottom edge so the icons rise out of the band instead of straddling it.
+     *
+     * @param focusedPos the focused dock position, or -1 when focus has left the dock.
+     */
+    void magnifyDock(int focusedPos) {
+        dockFocus = focusedPos;
+        if (focusedPos >= 0) dockAnchor = focusedPos;
+        packDock();
+    }
+
+    /**
+     * Lays the dock out the way a real dock sits: the icons packed against each other as one centred cluster
+     * rather than one per grid cell, each sized for its distance from the focus, and the magnified icon pushing
+     * its neighbours outward instead of growing over them.
+     *
+     * <p>This is a transform over the grid's own layout, not a second layout pass: the tiles keep their cells
+     * and their D-pad order, and only their scale and horizontal offset change. That keeps focus, the saved
+     * order and reorder mode working exactly as they do for a grid tile.
+     */
+    void packDock() {
+        if (!dockMagnify || grid == null || dockSize <= 0) return;
+        Holder[] holders = new Holder[dockSize];
+        View[] cards = new View[dockSize];
+        float[] restCentre = new float[dockSize];
+        float[] restTop = new float[dockSize];
+        int found = 0;
+        for (int i = 0; i < grid.getChildCount(); i++) {
+            View child = grid.getChildAt(i);
+            int pos = grid.getChildAdapterPosition(child);
+            if (pos < 0 || pos >= dockSize) continue;
+            RecyclerView.ViewHolder vh = grid.getChildViewHolder(child);
+            if (!(vh instanceof Holder)) continue;
+            View card = ((Holder) vh).card;
+            if (card.getWidth() == 0) return;   // pre-layout; the layout listener calls this again
+            holders[pos] = (Holder) vh;
+            cards[pos] = card;
+            // The cell centre the grid gave it, which translationX is measured from.
+            restCentre[pos] = child.getLeft() + card.getLeft() + card.getWidth() / 2f;
+            restTop[pos] = child.getTop() + card.getTop();
+            found++;
+        }
+        if (found == 0) return;
+
+        float gap = DOCK_GAP_DP * ctx.getResources().getDisplayMetrics().density;
+        int anchor = Math.max(0, Math.min(dockAnchor, dockSize - 1));
+        // The window stops at the ends of the row. Centring the focused icon itself would, on the first or
+        // last one, hold a half-empty screen with the dock pushed to one side; this keeps five icons on
+        // screen throughout, and focus still travels out to the edge of them.
+        int lo = Math.min(DOCK_WINDOW, Math.max(0, dockSize - 1));
+        int hi = Math.max(lo, dockSize - 1 - DOCK_WINDOW);
+        int middle = Math.max(lo, Math.min(anchor, hi));
+
+        float[] scale = new float[dockSize];
+        float[] alpha = new float[dockSize];
+        for (int i = 0; i < dockSize; i++) {
+            if (cards[i] == null) continue;
+            // Visibility follows the window; magnification follows the focus, which can sit at the window's edge.
+            int fromWindow = Math.abs(i - middle);
+            float s = fromWindow > DOCK_WINDOW ? DOCK_EDGE_SCALE : 1f;
+            if (dockFocus >= 0) {
+                int fromFocus = Math.abs(i - dockFocus);
+                if (fromFocus < DOCK_MAGNIFY.length) s = DOCK_MAGNIFY[fromFocus];
+            }
+            scale[i] = s;
+            alpha[i] = fromWindow <= DOCK_WINDOW ? 1f
+                    : fromWindow == DOCK_WINDOW + 1 ? DOCK_EDGE_ALPHA : 0f;
+        }
+
+        // Lay the row out from zero, then slide it so the anchor sits in the middle of the screen: moving
+        // focus scrolls the window, bringing the next icon in and taking the far one out.
+        float[] centre = new float[dockSize];
+        float cursor = 0f;
+        for (int i = 0; i < dockSize; i++) {
+            if (cards[i] == null) continue;
+            float w = cards[i].getWidth() * scale[i];
+            centre[i] = cursor + w / 2f;
+            cursor += w + gap;
+        }
+        float shift = grid.getWidth() / 2f - centre[middle];
+
+        for (int i = 0; i < dockSize; i++) {
+            View card = cards[i];
+            if (card == null) continue;
+            float cx = centre[i] + shift;
+            float tx = cx - restCentre[i];
+            if (i == dockFocus) {
+                // Where the name pill has to sit: the focused icon's packed centre, and the top it reaches once
+                // magnified. Both are the animation's destination, not where the tile is this frame, so the pill
+                // does not chase the icon up the screen.
+                dockLabelX = cx;
+                dockLabelTop = restTop[i] + card.getHeight() * (1f - scale[i]);
+            }
+            // Scale about the bottom centre: the icon rises out of the row, as a dock icon does, and the
+            // bottoms stay on one line however large the focused one grows.
+            card.setPivotX(card.getWidth() / 2f);
+            card.setPivotY(card.getHeight());
+            if (!animations || reducedMotion) {
+                card.setScaleX(scale[i]);
+                card.setScaleY(scale[i]);
+                card.setTranslationX(tx);
+                card.setAlpha(alpha[i]);
+                continue;
+            }
+            // Retarget, never restart: focus usually moves again before the row has settled, and a spring
+            // carries its current velocity into the new target instead of snapping to a fresh curve. No
+            // hardware layer either — building one per tile per keypress is what made the row stutter.
+            Holder h = holders[i];
+            h.dockSpring(0).animateToFinalPosition(scale[i]);
+            h.dockSpring(1).animateToFinalPosition(scale[i]);
+            h.dockSpring(2).animateToFinalPosition(tx);
+            h.dockSpring(3).animateToFinalPosition(alpha[i]);
+        }
     }
 
     @Override
@@ -423,21 +656,58 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         }
         h.card.setVisibility(View.VISIBLE);
         h.card.setFocusable(true);
+        // A dock icon is square; a grid tile keeps the 16:9 banner shape. Holders are recycled between the two,
+        // so the shape belongs to the bind rather than to onCreateViewHolder, which does not know the position.
+        if (dockMagnify && tileH > 0) {
+            int want = magnifiedDock(position) ? tileH : tileW;
+            ViewGroup.LayoutParams lp = h.card.getLayoutParams();
+            if (lp.width != want) {
+                lp.width = want;
+                lp.height = tileH;
+                h.card.setLayoutParams(lp);
+            }
+        }
         h.name.setText(e.name);
         // The dock has no labels, unless always_show_names asks for them (DockDecoration then makes room in the band).
         h.name.setVisibility(dockRow && position < dockSize && restNameAlpha == 0f ? View.INVISIBLE : View.VISIBLE);
         boolean focused = h.card.isFocused();   // a rebind after reload() can hit the focused tile
         h.name.setAlpha(focused ? 1f : restNameAlpha);
-        h.card.setScaleX(focused && animations ? focusScale() : 1f);
-        h.card.setScaleY(focused && animations ? focusScale() : 1f);
+        if (magnifiedDock(position)) {
+            // packDock owns a dock tile's scale and offset: both depend on how far it sits from the focused
+            // tile and on the whole row's widths, which one tile's own bind cannot see.
+            h.card.setPivotX(tileH / 2f);   // a dock tile is square, so its width is tileH
+            h.card.setPivotY(tileH);
+        } else {
+            // Holders are recycled between the dock and the grid: a tile that was faded out of the dock's
+            // window would otherwise arrive in the grid still invisible and still offset.
+            h.card.setTranslationX(0f);
+            h.card.setAlpha(1f);
+            h.card.setScaleX(focused && animations ? focusScale() : 1f);
+            h.card.setScaleY(focused && animations ? focusScale() : 1f);
+        }
         h.card.setTranslationY(focused && advancedEffects ? -4f * ctx.getResources().getDisplayMetrics().density : 0f);
         h.card.setTranslationZ(focused && advancedEffects ? 8f * ctx.getResources().getDisplayMetrics().density : 0f);
         h.banner.setScaleX(focused && advancedEffects ? 1.035f : 1f);
         h.banner.setScaleY(focused && advancedEffects ? 1.035f : 1f);
         // A fully opaque banner covers the whole card (centerCrop), so the card's own fill under it is drawn for
         // nothing on every frame; keep it under banners with transparent parts and under icon tiles.
-        h.card.setBackground(e.banner != null && e.banner.getOpacity() == PixelFormat.OPAQUE ? null : h.cardBackground);
-        if (e.banner != null) {
+        // A dock tile is a square icon on the card's own fill; a grid tile keeps its banner.
+        boolean dockIcon = magnifiedDock(position) && e.icon != null;
+        float dp = ctx.getResources().getDisplayMetrics().density;
+        // A dock icon is the whole tile, with no card drawn behind it: in a real dock the icons sit on the
+        // background, and a rounded slab behind each one reads as a button instead.
+        h.card.setBackground(dockIcon || (e.banner != null && e.banner.getOpacity() == PixelFormat.OPAQUE)
+                ? null : h.cardBackground);
+        if (dockIcon) {
+            h.banner.setImageDrawable(null);
+            h.banner.setVisibility(View.GONE);
+            h.icon.setImageDrawable(e.icon);
+            h.icon.setVisibility(View.VISIBLE);
+            // No caption inside a dock tile: the focused tile's name is already shown above the dock (dock_title),
+            // and four captions competing at once is what the stock row does.
+            h.label.setVisibility(View.GONE);
+            sizeIcon(h.icon, tileH, 0);
+        } else if (e.banner != null) {
             h.banner.setImageDrawable(e.banner);
             h.banner.setVisibility(View.VISIBLE);
             h.icon.setVisibility(View.GONE);
@@ -447,6 +717,7 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             h.banner.setVisibility(View.GONE);
             h.icon.setImageDrawable(e.icon);
             h.icon.setVisibility(View.VISIBLE);
+            sizeIcon(h.icon, Math.round(48 * dp), Math.round(14 * dp));
             h.label.setText(e.label);
             h.label.setVisibility(View.VISIBLE);
         }
@@ -457,6 +728,8 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                 if (pos != RecyclerView.NO_POSITION) listener.onTileLongPress(pos, v);
                 return true;
             }
+            // An input tile names no package, so App info has nothing to open: swallow the press.
+            if (e.kind == Entry.INPUT) return true;
             Intent i = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + e.pkg));
             i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             try {
@@ -467,11 +740,33 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         });
     }
 
+    /** The TV's own name for an input, the owner's rename in TV settings first; the hardware id's last segment
+     *  when TvInputManager does not know the input, so even a tile for an absent id stays readable. */
+    private String inputName(String inputId) {
+        TvInputManager tim = (TvInputManager) ctx.getSystemService(Context.TV_INPUT_SERVICE);
+        TvInputInfo info = tim == null ? null : tim.getTvInputInfo(inputId);
+        if (info != null) {
+            CharSequence custom = info.loadCustomLabel(ctx);
+            CharSequence label = custom != null ? custom : info.loadLabel(ctx);
+            if (label != null && label.length() > 0) return label.toString();
+        }
+        int slash = inputId.lastIndexOf('/');
+        return slash >= 0 && slash + 1 < inputId.length() ? inputId.substring(slash + 1) : inputId;
+    }
+
     /** Opens the tile's activity by explicit component, with no extras: a card can name nothing else. */
     private void launch(Entry e) {
         if (e.kind == Entry.HOME_SETTINGS) {
             ctx.startActivity(new Intent(ctx, HomeSettingsActivity.class)
                     .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+            return;
+        }
+        if (e.kind == Entry.INPUT) {
+            // The same passthrough switch a mapped remote button makes, so there is one code path to trust.
+            RemoteKeys.launch(ctx, "input:" + e.inputId);
+            if (advancedEffects && !reducedMotion && ctx instanceof Activity) {
+                ((Activity) ctx).overridePendingTransition(R.anim.app_open_enter, R.anim.app_open_exit);
+            }
             return;
         }
         Intent i = new Intent(Intent.ACTION_MAIN)
@@ -688,9 +983,43 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         final float restNameAlpha;
         final boolean overshoot;
 
+        /** Set only with dock_magnify on: the adapter drives a dock tile's zoom, since it alone sees the row. */
+        final AppAdapter magnifier;
+        /** Springs carrying this tile to its packed size and place; made on first use, then retargeted. */
+        private SpringAnimation dockScaleX, dockScaleY, dockTransX, dockAlpha;
+
+        /** This tile's spring: 0 scaleX, 1 scaleY, 2 translationX, 3 alpha. */
+        SpringAnimation dockSpring(int which) {
+            if (which == 0) {
+                if (dockScaleX == null) dockScaleX = newSpring(DynamicAnimation.SCALE_X, DynamicAnimation.MIN_VISIBLE_CHANGE_SCALE);
+                return dockScaleX;
+            }
+            if (which == 1) {
+                if (dockScaleY == null) dockScaleY = newSpring(DynamicAnimation.SCALE_Y, DynamicAnimation.MIN_VISIBLE_CHANGE_SCALE);
+                return dockScaleY;
+            }
+            if (which == 2) {
+                if (dockTransX == null) dockTransX = newSpring(DynamicAnimation.TRANSLATION_X, DynamicAnimation.MIN_VISIBLE_CHANGE_PIXELS);
+                return dockTransX;
+            }
+            if (dockAlpha == null) dockAlpha = newSpring(DynamicAnimation.ALPHA, DynamicAnimation.MIN_VISIBLE_CHANGE_ALPHA);
+            return dockAlpha;
+        }
+
+        private SpringAnimation newSpring(DynamicAnimation.ViewProperty property, float minimumVisibleChange) {
+            SpringAnimation s = new SpringAnimation(card, property);
+            // Critically damped: a dock settles, it does not wobble.
+            s.setSpring(new SpringForce()
+                    .setStiffness(DOCK_STIFFNESS)
+                    .setDampingRatio(SpringForce.DAMPING_RATIO_NO_BOUNCY));
+            s.setMinimumVisibleChange(minimumVisibleChange);
+            return s;
+        }
+
         Holder(View v, TileListener listener, boolean animations, boolean advancedEffects,
-               boolean reducedMotion, float restNameAlpha, boolean overshoot) {
+               boolean reducedMotion, float restNameAlpha, boolean overshoot, AppAdapter magnifier) {
             super(v);
+            this.magnifier = magnifier;
             card = v.findViewById(R.id.card);
             cardBackground = card.getBackground();
             banner = v.findViewById(R.id.banner);
@@ -725,6 +1054,15 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                 view.animate().cancel();
                 banner.animate().cancel();
                 name.animate().cancel();
+                int dockPos = getBindingAdapterPosition();
+                if (magnifier != null && magnifier.magnifiedDock(dockPos)) {
+                    // A dock tile cannot set its own scale: the size depends on how far it sits from the focused
+                    // tile, which only the adapter can see. It resizes the whole row, this one included.
+                    magnifier.magnifyDock(focused ? dockPos : -1);
+                    name.setAlpha(focused ? 1f : restNameAlpha);
+                    if (focused && listener != null) listener.onTileFocused(dockPos, view);
+                    return;
+                }
                 float scale = !animations ? 1f : advancedEffects ? 1.12f : 1.10f;
                 float s = focused ? scale : 1f;
                 if (!animations) {

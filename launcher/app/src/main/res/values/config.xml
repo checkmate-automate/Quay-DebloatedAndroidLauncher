@@ -16,11 +16,24 @@
     </string-array>
 
     <!-- Apps pinned to the dock row at the bottom, in this order. Missing apps are skipped. -->
+    <!-- Kogan KALED50RN9220STA. The first item is a TV input rather than a package: "input:<id>[=Label]"
+         switches to that HDMI port. Drop the "=Fire TV" suffix and the tile takes the TV's own name for the
+         input instead, including a rename made in TV settings.
+         App order follows measured use on this set (YouTube, Netflix and iview are the three in daily use). -->
     <string-array name="dock_apps">
-        <item>com.netflix.ninja</item>
-        <item>com.amazon.amazonvideo.livingroom</item>
+        <item>input:com.mediatek.tvinput/.hdmi.HDMIInputService/HW7=Fire TV</item>
         <item>com.google.android.youtube.tv</item>
-        <item>in.startv.hotstar</item>
+        <item>com.netflix.ninja</item>
+        <item>au.net.abc.iview</item>
+        <item>com.disney.disneyplus</item>
+        <item>com.swm.live</item>
+        <item>com.mediatek.wwtv.tvcenter</item>
+        <item>com.android.vending</item>
+        <item>com.homwee.mmp.fileexplorer</item>
+        <item>com.homwee.multiscreenshare</item>
+        <item>com.homwee.chtvmanager</item>
+        <item>com.homwee.aipont</item>
+        <item>com.homwee.help</item>
     </string-array>
     <!-- With fewer dock_apps than columns (or a dock app that is not installed), the free dock slots take
          the first grid apps, so the dock never shows a gap. false leaves them empty (#162); a theme can
@@ -28,8 +41,9 @@
     <bool name="fill_dock">true</bool>
 
     <!-- Apps never shown as tiles (e.g. the Live TV app, which the Inputs menu already covers). -->
+    <!-- Live TV is NOT hidden here: this dock holds every app on the set, so the tuner gets a tile of its
+         own rather than being reachable only through the Inputs menu. -->
     <string-array name="hidden_apps">
-        <item>com.mediatek.wwtv.tvcenter</item>
         <item>com.mitv.gallery</item>
     </string-array>
 
@@ -209,7 +223,15 @@
     <!-- The dock band's padding equals the gap between its tiles on all four sides (as far as the grid's edges leave room),
          so its corners are concentric with the tiles' and the spacing reads even. false (the default) keeps the fixed
          14dp above and below, up to 22dp at the sides and 26dp corners. Can also be set with "dock_even_padding": true in a theme's config.json. -->
+    <!-- Left false with dock_magnify: a square dock tile leaves most of its cell empty, so "the gap between two
+         tiles" becomes about 79dp and the even-padding band inflates to swallow the icons. The fixed 14dp band
+         hugs them. -->
     <bool name="dock_even_padding">false</bool>
+
+    <!-- macOS style dock: the dock's tiles become square icons and magnify with their neighbours when focus
+         lands on one (AppAdapter.DOCK_MAGNIFY), rising out of the band rather than zooming in place. false
+         restores the stock tvOS dock, 16:9 tiles with one uniform focus zoom. -->
+    <bool name="dock_magnify">true</bool>
     <!-- A reorder button (two arrows) in the top bar. Off by default: reordering is also in the Settings
          button's long-press menu, so it needs no extra button on screen. -->
     <bool name="reorder_button">false</bool>
@@ -262,11 +284,13 @@
 
     <!-- The focused dock app's name in large type above the dock. false keeps only the glow, which leaves room
          for bigger tiles when rows_below_dock is 2 or 3. -->
-    <bool name="dock_title">true</bool>
+    <!-- Off with dock_magnify: the dock names the focused icon in a pill directly above it, and the large
+         title off to the left would say the same thing twice. -->
+    <bool name="dock_title">false</bool>
 
     <!-- Tiles per row in the grid; the dock always has this many slots. Tiles are 180dp wide at 4 columns and
          shrink to fit from 5 up (about 144dp at 5, 117dp at 6 on a 1080p TV). -->
-    <integer name="columns">4</integer>
+    <integer name="columns">13</integer>
 
     <!-- Basic motion is on; advanced effects are opt-in in the launcher's own Settings screen. -->
     <bool name="animations">true</bool>

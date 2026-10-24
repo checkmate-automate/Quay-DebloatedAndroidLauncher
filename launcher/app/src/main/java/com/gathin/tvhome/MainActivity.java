@@ -135,6 +135,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private FrameLayout root;
     private WallpaperPlayer wallpaperPlayer;
     private GlassView glass;
+    /** The focused dock icon's name, floating above it (dock_magnify); null when the view is absent. */
+    private android.widget.TextView dockLabel;
     private View ambient;
     private TextView heroName;
     /** The top shelf: heroName, plus the cinematic shelf's "Last opened" line and dock position dots. */
@@ -146,6 +148,12 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     /** config.xml ambient_glow, overridable by a theme. Off: the glow view is gone and no fade or colour animator
      *  is started for it, so a focus move costs nothing extra on a launcher that runs all day. */
     private boolean ambientGlow;
+    /**
+     * How strongly the focused app's colour washes over the background as focus moves icon to icon.
+     * Full strength was built for a plain black home; over a photograph it repaints the whole picture a
+     * different colour at every keypress. This keeps the hint of colour and leaves the wallpaper alone.
+     */
+    private static final float AMBIENT_ALPHA = 0.4f;
     /** config.xml app_glow: the highlight takes the focused app's colour on every tile. */
     private boolean appGlow;
     /** config.xml glow_style: the shape setAmbient paints the glow mask in. */
@@ -395,6 +403,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         sky = findViewById(R.id.sky);
         sky.setIntensity(cfg.skyIntensity);
         glass = findViewById(R.id.glass);
+        dockLabel = findViewById(R.id.dock_label);
         if (festive) glass.setAccent(festival.accentColor());
         ambient = findViewById(R.id.ambient);
         // The glow is one bitmap, so its alpha can be applied while drawing it. Otherwise every frame of
@@ -511,7 +520,11 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             public void onChildViewDetachedFromWindow(@NonNull View v) {
             }
         });
-        if (dockRow) grid.addItemDecoration(new DockDecoration(COLUMNS, density, cinematic, cfg.alwaysShowNames, cfg.dockOpacity, cfg.dockGlass, cfg.dockEvenPadding));
+        // dock_magnify draws no band: a dock is its icons, and the band is sized from the tiles' cells, which
+        // the packed dock no longer sits in — it would float behind the cluster at the row's full width.
+        if (dockRow && !getResources().getBoolean(R.bool.dock_magnify)) {
+            grid.addItemDecoration(new DockDecoration(COLUMNS, density, cinematic, cfg.alwaysShowNames, cfg.dockOpacity, cfg.dockGlass, cfg.dockEvenPadding));
+        }
         if (cfg.fadeRows) TopFade.attach(grid, 48 * density);
         // Reduced motion: the tiles are simply there, with no entrance (reloadApps skips it there too).
         if (animations && !reducedMotion) {
@@ -1476,6 +1489,57 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         appLibrary.show();
     }
 
+    /**
+     * Puts the focused dock icon's name in a small pill directly above it, the way a dock names the icon
+     * under the pointer. The geometry comes from the adapter, which packed the row and so knows where the
+     * icon is going; reading it off the view would follow the magnify animation and drag the pill with it.
+     */
+    private void showDockLabel(int position) {
+        if (dockLabel == null) return;
+        String text = adapter.labelAt(position);
+        if (text == null || text.isEmpty()) {
+            hideDockLabel();
+            return;
+        }
+        dockLabel.setText(text);
+        int unspec = View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED);
+        dockLabel.measure(unspec, unspec);
+        float pw = dockLabel.getMeasuredWidth(), ph = dockLabel.getMeasuredHeight();
+
+        // Grid coordinates to root coordinates.
+        int[] g = new int[2], r = new int[2];
+        grid.getLocationInWindow(g);
+        root.getLocationInWindow(r);
+        float x = g[0] - r[0] + adapter.dockLabelX() - pw / 2f;
+        float y = g[1] - r[1] + adapter.dockLabelTop() - ph - 16f * density;
+        float edge = 12f * density;
+        x = Math.max(edge, Math.min(x, root.getWidth() - pw - edge));
+
+        boolean up = dockLabel.getAlpha() > 0f;
+        dockLabel.animate().cancel();
+        if (!animations || reducedMotion || !up) {
+            // Not showing yet: place it, then fade in. Sliding it in from the last icon would drag it
+            // across the screen the first time focus enters the dock.
+            dockLabel.setTranslationX(x);
+            dockLabel.setTranslationY(y);
+            if (animations && !reducedMotion) dockLabel.animate().alpha(1f).setDuration(120).start();
+            else dockLabel.setAlpha(1f);
+            return;
+        }
+        dockLabel.animate().translationX(x).translationY(y).alpha(1f)
+                .setDuration(AppAdapter.DOCK_MAGNIFY_MS)
+                .setInterpolator(new android.view.animation.DecelerateInterpolator(1.5f))
+                .start();
+    }
+
+    /** Takes the dock's name pill away when focus leaves the dock. */
+    private void hideDockLabel() {
+        if (dockLabel == null || dockLabel.getAlpha() == 0f) return;
+        dockLabel.animate().cancel();
+        if (animations && !reducedMotion) dockLabel.animate().alpha(0f).setDuration(100).start();
+        else dockLabel.setAlpha(0f);
+    }
+
     @Override
     public void onTileFocused(int position, View card) {
         lastFocused = position;
@@ -1487,6 +1551,21 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 if (card.isFocused() && card.getWidth() > 0) onTileFocused(position, card);
             });
             return;
+        }
+        if (adapter.magnifiedDock(position)) {
+            // A dock shows focus by magnifying; the sliding highlight is the grid's language, not the dock's.
+            // It could not follow the dock anyway: offsetDescendantRectToMyCoords below reads layout positions
+            // and ignores the translationX that packs the icons, so the glass would sit under the wrong tile.
+            glass.post(() -> {
+                if (adapter.magnifiedDock(lastFocused)) {
+                    glass.animate().cancel();
+                    glass.setAlpha(0f);
+                    glassShown = false;
+                }
+            });
+            showDockLabel(position);
+        } else {
+            hideDockLabel();
         }
         // Tile rect in root coordinates, using layout positions (ignores the scale animation).
         Rect r = tileRect;
@@ -1594,7 +1673,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             hero.setAlpha(1f);
             if (ambientGlow) {
                 setAmbient(color);
-                ambient.setAlpha(1f);
+                ambient.setAlpha(AMBIENT_ALPHA);
             }
             heroShown = true;
             return;
@@ -1610,7 +1689,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             hero.animate().alpha(1f).setDuration(260).start();
             if (ambientGlow) {
                 setAmbient(color);
-                ambient.animate().alpha(1f).setDuration(600).start();
+                ambient.animate().alpha(AMBIENT_ALPHA).setDuration(600).start();
             }
             heroShown = true;
         } else if (changed) {
@@ -1624,9 +1703,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             if (ambientGlow && advancedEffects) {
                 transitionAmbient(color);
             } else if (ambientGlow && color != ambientColor) {
-                ambient.animate().alpha(0.35f).setDuration(200).withEndAction(() -> {
+                ambient.animate().alpha(AMBIENT_ALPHA * 0.35f).setDuration(200).withEndAction(() -> {
                     setAmbient(color);
-                    ambient.animate().alpha(1f).setDuration(500).start();
+                    ambient.animate().alpha(AMBIENT_ALPHA).setDuration(500).start();
                 }).start();
             }
         } else {
@@ -1825,10 +1904,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         stopAmbientAnimation();
         ambient.animate().cancel();
         if (color == ambientColor) {
-            ambient.animate().alpha(1f).setDuration(180).start();
+            ambient.animate().alpha(AMBIENT_ALPHA).setDuration(180).start();
             return;
         }
-        ambient.animate().alpha(1f).setDuration(180).start();
+        ambient.animate().alpha(AMBIENT_ALPHA).setDuration(180).start();
         ambientAnimator = ValueAnimator.ofObject(new ArgbEvaluator(), ambientColor, color);
         ambientAnimator.setDuration(360);
         ambientAnimator.addUpdateListener(animation -> setAmbient((int) animation.getAnimatedValue()));
@@ -1858,17 +1937,17 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         if (!ambientGlow) return;
         if (!animations || reducedMotion) {
             setAmbient(color);
-            ambient.setAlpha(1f);
+            ambient.setAlpha(AMBIENT_ALPHA);
             return;
         }
         if (color == ambientColor && ambient.getBackground() != null) {
-            ambient.animate().alpha(1f).setDuration(300).start();
+            ambient.animate().alpha(AMBIENT_ALPHA).setDuration(300).start();
             return;
         }
         // The same dip-and-swap as the dock's top shelf.
-        ambient.animate().alpha(0.35f).setDuration(ambient.getAlpha() > 0.35f ? 200 : 0).withEndAction(() -> {
+        ambient.animate().alpha(AMBIENT_ALPHA * 0.35f).setDuration(ambient.getAlpha() > 0.35f ? 200 : 0).withEndAction(() -> {
             setAmbient(color);
-            ambient.animate().alpha(1f).setDuration(500).start();
+            ambient.animate().alpha(AMBIENT_ALPHA).setDuration(500).start();
         }).start();
     }
 

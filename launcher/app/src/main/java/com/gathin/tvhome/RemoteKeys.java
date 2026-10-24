@@ -146,11 +146,24 @@ final class RemoteKeys {
         return heldMs >= HOLD_MS && holdApp != null ? holdApp : app;
     }
 
-    /** The TV input id of an "input:<id>" target, e.g. "input:com.tcl.tvinput/.passthroughinput.TvPassThroughService/HW1413743104"; null for a package. */
+    /** The TV input id of an "input:<id>" target, e.g. "input:com.tcl.tvinput/.passthroughinput.TvPassThroughService/HW1413743104"; null for a package.
+     *  A dock_apps key may add "=Label" to name its tile; input ids never contain '=', so the suffix is cut here
+     *  and both the dock tile and a mapped remote button resolve the same id. */
     static String inputId(String target) {
         if (target == null || !target.startsWith("input:")) return null;
         String id = target.substring("input:".length()).trim();
+        int eq = id.indexOf('=');
+        if (eq >= 0) id = id.substring(0, eq).trim();
         return id.isEmpty() ? null : id;
+    }
+
+    /** The tile name an "input:<id>=Label" key asks for, or null to use the TV's own name for the input. */
+    static String inputLabel(String target) {
+        if (target == null || !target.startsWith("input:")) return null;
+        int eq = target.indexOf('=');
+        if (eq < 0) return null;
+        String label = target.substring(eq + 1).trim();
+        return label.isEmpty() ? null : label;
     }
 
     /** Opens an app from a remote button: its TV entry if it has one, else its phone entry. An "input:<id>" target

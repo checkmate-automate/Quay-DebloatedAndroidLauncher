@@ -376,4 +376,21 @@
         android:layout_height="10dp"
         android:alpha="0"
         android:importantForAccessibility="no" />
+
+    <!-- The focused dock icon's name, floating just above it the way a dock's tooltip does. -->
+    <TextView
+        android:id="@+id/dock_label"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:background="@drawable/tile_bg"
+        android:paddingStart="14dp"
+        android:paddingEnd="14dp"
+        android:paddingTop="6dp"
+        android:paddingBottom="7dp"
+        android:singleLine="true"
+        android:textColor="#FFF5F6F8"
+        android:textSize="15sp"
+        android:fontFamily="@string/font_medium"
+        android:alpha="0"
+        android:importantForAccessibility="no" />
 </FrameLayout>
