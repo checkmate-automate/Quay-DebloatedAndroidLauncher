@@ -1543,9 +1543,17 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private void positionDockLabel(boolean animate) {
         View card = dockFocusCard;
         if (dockLabel == null || card == null || card.getHeight() == 0) return;
-        int unspec = View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED);
-        dockLabel.measure(unspec, unspec);
-        float pw = dockLabel.getMeasuredWidth(), ph = dockLabel.getMeasuredHeight();
+        // Measure the width freely, but the height EXACTLY as the layout fixes it: measuring both
+        // UNSPECIFIED returns the text's own height and ignores layout_height, which placed the pill as if
+        // it were half its real size, so its container hung down over the icon.
+        ViewGroup.LayoutParams lp = dockLabel.getLayoutParams();
+        int wSpec = View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED);
+        int hSpec = lp != null && lp.height > 0
+                ? View.MeasureSpec.makeMeasureSpec(lp.height, View.MeasureSpec.EXACTLY)
+                : wSpec;
+        dockLabel.measure(wSpec, hSpec);
+        float pw = dockLabel.getMeasuredWidth();
+        float ph = dockLabel.getHeight() > 0 ? dockLabel.getHeight() : dockLabel.getMeasuredHeight();
 
         int[] c = new int[2], rs = new int[2];
         card.getLocationOnScreen(c);
