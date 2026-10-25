@@ -137,6 +137,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private GlassView glass;
     /** The focused dock icon's name, floating above it (dock_magnify); null when the view is absent. */
     private android.widget.TextView dockLabel;
+    /** The now-playing strip under the date; null when the view is absent from a theme's layout. */
+    private NowPlaying nowPlaying;
     /** The dock card the pill is naming, so a scroll can carry the pill with it. */
     private View dockFocusCard;
     private View ambient;
@@ -406,6 +408,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         sky.setIntensity(cfg.skyIntensity);
         glass = findViewById(R.id.glass);
         dockLabel = findViewById(R.id.dock_label);
+        View npStrip = findViewById(R.id.nowPlaying);
+        if (npStrip != null) nowPlaying = new NowPlaying(this, npStrip);
         if (festive) glass.setAccent(festival.accentColor());
         ambient = findViewById(R.id.ambient);
         // The glow is one bitmap, so its alpha can be applied while drawing it. Otherwise every frame of
@@ -830,6 +834,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     @Override
     protected void onResume() {
         super.onResume();
+        if (nowPlaying != null) nowPlaying.start();
         // A festival that started or ended while Home was in the background: rebuild with or without it.
         if (festive != festival.active(LocalDate.now())) {
             recreate();
@@ -1041,6 +1046,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     @Override
     protected void onPause() {
         super.onPause();
+        if (nowPlaying != null) nowPlaying.stop();
         root.removeCallbacks(showIdleClock);
         endReorder();   // Home or another app while reordering keeps the order so far
         wallpaperPlayer.stop();

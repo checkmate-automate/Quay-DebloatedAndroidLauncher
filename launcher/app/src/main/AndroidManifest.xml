@@ -207,5 +207,21 @@
                 android:name="android.accessibilityservice"
                 android:resource="@xml/input_key_service" />
         </service>
+
+        <!-- Declared only so MediaSessionManager.getActiveSessions accepts this app as a caller; it
+             handles no notifications. Switch it on once with:
+             adb shell settings put secure enabled_notification_listeners "<existing>:com.gathin.tvhome/com.gathin.tvhome.MediaListener"
+             Exported on purpose: the system binds it from outside the app, and BIND_NOTIFICATION_LISTENER_SERVICE
+             is what keeps anything else from doing so. With exported="false" the bind never happens and
+             getActiveSessions keeps throwing SecurityException. -->
+        <service
+            android:name=".MediaListener"
+            android:exported="true"
+            android:label="@string/app_name"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
+        </service>
     </application>
 </manifest>
