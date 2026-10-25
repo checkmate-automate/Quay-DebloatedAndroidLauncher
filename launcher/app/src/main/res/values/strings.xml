@@ -148,4 +148,5 @@
     <string name="np_prev">Previous track</string>
     <string name="np_play">Play or pause</string>
     <string name="np_next">Next track</string>
+    <string name="music_toggle">Show or hide the music player</string>
 </resources>

@@ -139,6 +139,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private android.widget.TextView dockLabel;
     /** The now-playing strip under the date; null when the view is absent from a theme's layout. */
     private NowPlaying nowPlaying;
+    /** Top-bar toggle for the strip; its state outlives a restart. */
+    private TextView btnMusic;
+    private static final String PREFS_UI = "ui";
+    private static final String KEY_MUSIC_SHOWN = "music_shown";
     /** The dock card the pill is naming, so a scroll can carry the pill with it. */
     private View dockFocusCard;
     private View ambient;
@@ -410,6 +414,16 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         dockLabel = findViewById(R.id.dock_label);
         View npStrip = findViewById(R.id.nowPlaying);
         if (npStrip != null) nowPlaying = new NowPlaying(this, npStrip);
+        btnMusic = findViewById(R.id.btnMusic);
+        if (btnMusic != null) {
+            boolean show = getSharedPreferences(PREFS_UI, MODE_PRIVATE).getBoolean(KEY_MUSIC_SHOWN, true);
+            applyMusicShown(show);
+            btnMusic.setOnClickListener(v -> {
+                boolean next = nowPlaying == null || !nowPlaying.shown();
+                getSharedPreferences(PREFS_UI, MODE_PRIVATE).edit().putBoolean(KEY_MUSIC_SHOWN, next).apply();
+                applyMusicShown(next);
+            });
+        }
         if (festive) glass.setAccent(festival.accentColor());
         ambient = findViewById(R.id.ambient);
         // The glow is one bitmap, so its alpha can be applied while drawing it. Otherwise every frame of
@@ -478,6 +492,11 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 // has to come along rather than stay where the card used to be.
                 if (dockLabel != null && dockLabel.getAlpha() > 0f) positionDockLabel(false);
             }
+        });
+        // A scroll is not the only thing that moves the dock: showing or hiding the now-playing strip
+        // reflows the whole screen, and the pill would otherwise stay where the icons used to be.
+        grid.addOnLayoutChangeListener((v, l, t, r, b, ol, ot, orr, ob) -> {
+            if (dockLabel != null && dockLabel.getAlpha() > 0f) grid.post(() -> positionDockLabel(false));
         });
         rtlAppGrid = getResources().getBoolean(R.bool.rtl_app_grid);
         // Mirror only the app grid; the header and other locales keep their own layouts.
@@ -1499,6 +1518,20 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         });
         openPopup = appLibrary.popup;
         appLibrary.show();
+    }
+
+    /**
+     * Turns the strip on or off and swaps the button's glyph to match: a plain note while the player is
+     * showing, struck through while it is hidden. The icon carries the state rather than a dimmed button,
+     * which reads as "disabled" instead of "off".
+     */
+    private void applyMusicShown(boolean show) {
+        if (nowPlaying != null) nowPlaying.setShown(show);
+        if (btnMusic != null) {
+            btnMusic.setCompoundDrawablesRelativeWithIntrinsicBounds(
+                    show ? R.drawable.ic_music_toggle : R.drawable.ic_music_toggle_off, 0, 0, 0);
+            btnMusic.setAlpha(1f);
+        }
     }
 
     /**

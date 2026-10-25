@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A plain note, so it carries the pill tint and matches the other top-bar glyphs. A brand mark in its
+     own colour sat oddly among them. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="22dp" android:height="22dp"
+    android:viewportWidth="24" android:viewportHeight="24">
+    <path android:fillColor="#FFFFFFFF"
+        android:pathData="M12,3v10.55A4,4 0 1 0 14,17V7h4V3h-6z" />
+</vector>

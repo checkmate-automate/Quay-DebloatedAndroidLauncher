@@ -41,6 +41,8 @@ final class NowPlaying {
     /** The session being shown, and the callback registered on it; both null while the strip is hidden. */
     private MediaController controller;
     private MediaController.Callback callback;
+    /** The owner's choice from the top bar, kept apart from whether anything happens to be playing. */
+    private boolean shown = true;
 
     NowPlaying(Context ctx, View strip) {
         this.ctx = ctx;
@@ -60,6 +62,28 @@ final class NowPlaying {
     }
 
     private enum Transport { PREV, PLAY_PAUSE, NEXT }
+
+    /**
+     * Shows or hides the strip by choice. Turning it off also stops whatever is playing: the control is
+     * read as "music off", and leaving a track playing with nothing on screen to stop it would strand it.
+     */
+    void setShown(boolean show) {
+        shown = show;
+        if (show) {
+            draw();
+            return;
+        }
+        MediaController c = controller;
+        if (c != null) {
+            PlaybackState s = c.getPlaybackState();
+            if (s != null && s.getState() == PlaybackState.STATE_PLAYING) c.getTransportControls().pause();
+        }
+        hide();
+    }
+
+    boolean shown() {
+        return shown;
+    }
 
     /** Starts following the active session, and keeps following as apps come and go. */
     void start() {
@@ -137,13 +161,25 @@ final class NowPlaying {
         callback = null;
     }
 
+    /**
+     * Takes the strip off screen while the owner still wants it, keeping its space.
+     *
+     * <p>Always INVISIBLE, never GONE. GONE reclaims the space and reflows everything below it, moving the
+     * dock, its name pill and the rest of the screen — every time a track ends, a session appears, or the
+     * strip is switched off. Holding the space costs nothing visually, since what shows through is the
+     * wallpaper, and in exchange the layout never moves.
+     */
     private void hide() {
-        root.setVisibility(View.GONE);
+        root.setVisibility(View.INVISIBLE);
     }
 
     /** Puts the current track on screen, or hides the strip when there is nothing to say about it. */
     private void draw() {
         MediaController c = controller;
+        if (!shown) {
+            hide();
+            return;
+        }
         if (c == null) {
             hide();
             return;
@@ -160,7 +196,9 @@ final class NowPlaying {
         CharSequence by = m.getText(MediaMetadata.METADATA_KEY_ARTIST);
         if (TextUtils.isEmpty(by)) by = m.getText(MediaMetadata.METADATA_KEY_ALBUM_ARTIST);
         artist.setText(by == null ? "" : by);
-        artist.setVisibility(TextUtils.isEmpty(by) ? View.GONE : View.VISIBLE);
+        // INVISIBLE rather than GONE throughout: a missing artist, a missing cover or an unsupported
+        // transport button must not resize the strip and nudge everything around it.
+        artist.setVisibility(TextUtils.isEmpty(by) ? View.INVISIBLE : View.VISIBLE);
 
         Bitmap cover = m.getBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART);
         if (cover == null) cover = m.getBitmap(MediaMetadata.METADATA_KEY_ART);
@@ -168,7 +206,8 @@ final class NowPlaying {
             art.setImageBitmap(cover);
             art.setVisibility(View.VISIBLE);
         } else {
-            art.setVisibility(View.GONE);
+            art.setImageDrawable(null);
+            art.setVisibility(View.INVISIBLE);
         }
 
         boolean playing = s != null && s.getState() == PlaybackState.STATE_PLAYING;
@@ -176,8 +215,8 @@ final class NowPlaying {
                 playing ? R.drawable.ic_np_pause : R.drawable.ic_np_play, 0, 0, 0);
         // Only offer a control the session says it supports, so a button never does nothing.
         long actions = s == null ? 0 : s.getActions();
-        prev.setVisibility((actions & PlaybackState.ACTION_SKIP_TO_PREVIOUS) != 0 ? View.VISIBLE : View.GONE);
-        next.setVisibility((actions & PlaybackState.ACTION_SKIP_TO_NEXT) != 0 ? View.VISIBLE : View.GONE);
+        prev.setVisibility((actions & PlaybackState.ACTION_SKIP_TO_PREVIOUS) != 0 ? View.VISIBLE : View.INVISIBLE);
+        next.setVisibility((actions & PlaybackState.ACTION_SKIP_TO_NEXT) != 0 ? View.VISIBLE : View.INVISIBLE);
         root.setVisibility(View.VISIBLE);
     }
 
