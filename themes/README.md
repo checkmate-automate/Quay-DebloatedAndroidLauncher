@@ -52,6 +52,8 @@ A new key needs one there in the same pull request.
 | `input_sources` | list, `config.xml` only | Vendor source numbers for the Inputs menu, `HW<n>=<number>` by the input id's last part; a mapped input opens by sending `input_action` with the number as the int extra `input`, and `HW<n>=-` leaves a port the set doesn't have out of the menu. Xiaomi/Redmi China firmware: [redmi-mitv-mftp0](../examples/redmi-mitv-mftp0/). Not read from a theme |
 | `columns` | 1 to 8 | Tiles per row; tiles shrink to fit from 5 up |
 | `rows_below_dock` | 0 to 3 | Grid rows left visible under the dock; tiles shrink if the dock, its title and that many rows would not fit the screen height |
+| `dock_magnify` | bool | Square dock icons that magnify with their neighbours, macOS style, in a sliding window of five (`true`); `false` restores the stock dock of 16:9 tiles with one uniform focus zoom |
+| `dial_app_url` | string | DIAL application URL of the device a tile's `dial:` option starts an app on, e.g. `http://192.168.1.50:8009/apps/`; empty finds it by SSDP on first use and remembers it, which also survives the device changing address |
 | `dock_title` | bool | The focused dock app's name in large type above the dock (`true`); `false` keeps only the glow |
 | `dock_row` | bool | The dock as its own row with a band (`true`); `false` makes the dock apps the first tiles of one plain grid |
 | `reorder_button` | bool | A reorder button in the top bar (`false` by default); reordering is always in the Settings button's long-press menu |

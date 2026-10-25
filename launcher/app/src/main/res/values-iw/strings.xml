@@ -141,4 +141,8 @@
     <string name="race_countdown_hours">%1$d שע׳ %2$d דק׳</string>
     <string name="race_countdown_days">%1$d ימ׳ %2$d שע׳</string>
     <string name="last_opened">פתיחה אחרונה: %1$s</string>
+    <string name="np_prev">הרצועה הקודמת</string>
+    <string name="np_play">ניגון או השהיה</string>
+    <string name="np_next">הרצועה הבאה</string>
+    <string name="music_toggle">הצגה או הסתרה של נגן המוזיקה</string>
 </resources>

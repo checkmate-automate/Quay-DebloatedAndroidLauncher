@@ -214,8 +214,12 @@ renaming its activity.
 
 The launcher this builds on, the ADB tooling and 260-odd tested debloat lists are the work of
 [**Gathin23/cleanyourtv**](https://github.com/Gathin23/cleanyourtv), MIT licensed, all of it still here and
-untouched. See [README.upstream.md](README.upstream.md). If you're here for debloating rather than a
-launcher, go there.
+untouched. See [README-upstream.md](README-upstream.md), also in
+[中文](README.zh-CN.md), [日本語](README.ja.md) and [Tiếng Việt](README.vi.md). If you're here for
+debloating rather than a launcher, go there.
+
+Working on this with a coding agent? [AGENTS.md](AGENTS.md) is the guide for it, and the tests in
+`tests/` hold the repo's documentation to its word.
 
 This fork keeps that licence and copyright (see [LICENSE](LICENSE)) and isn't affiliated with or endorsed
 by that project.
