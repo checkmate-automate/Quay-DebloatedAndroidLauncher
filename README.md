@@ -17,20 +17,22 @@ Icons sit in a tight row at the bottom of the screen. The focused one grows and 
 aside to make room. Thirteen apps fit in a window of five that slides as you move along, so the dock never
 becomes a grid.
 
-Tiles move on springs, so holding down a direction stays smooth at speed.
+The tiles move on springs, so it keeps up when you hold a direction down.
 
 ## Glass
 
-Every icon sits on a plate that bends the wallpaper behind it, lit along its top edge.
+Every icon sits on a pane of glass that bends the wallpaper behind it, with a highlight along the top
+edge.
 
 Android has no backdrop blur below API 31, and a 1 GB television can't afford one per frame. A wallpaper
 doesn't move, though, so it's blurred once into a 64 pixel bitmap of about 8 KB, and each tile samples the
-slice behind it and magnifies it. Real refraction on Android 8.0 and up, for 8 KB and no blur API.
+slice behind it and magnifies it. That's real refraction on Android 8.0 and up, for the cost of 8 KB.
 
 ## Open an app on your streaming stick
 
-Put `dial:Netflix` on an input tile. Pressing it switches the TV to HDMI 4 and opens Netflix on the Fire
-Stick plugged into it, so the stream comes off the faster box instead of the television's own app.
+Add `dial:Netflix` to an input tile. Press it, and the TV jumps to HDMI 4 while Netflix opens on the Fire
+Stick plugged in there. You watch on the box with the better chip and the better Wi-Fi, rather than the
+television's own sluggish copy.
 
 It uses [DIAL](http://www.dial-multiscreen.org/), the protocol your phone uses to send Netflix to a TV. No
 ADB, no debugging left enabled, no open port, and nothing to re-pair after an update.
@@ -39,19 +41,21 @@ DIAL only reaches apps that register a DIAL name. On Fire OS that's Netflix and 
 
 ## Now playing
 
-Album art, track, artist and transport controls under the clock, read from the active media session. It
-follows Spotify, a browser, or anything else that publishes one. A button in the top bar hides it, and
-hiding it pauses playback.
+Whatever's playing turns up under the clock: cover art, the track, who it's by, and buttons to pause or
+skip. It isn't tied to Spotify, so anything that plays audio shows up the same way.
+
+When you've had enough of it, the note in the top bar clears it off the screen and takes the music with
+it.
 
 ## Top bar
 
-Inputs, Wi-Fi and Settings as three icons, each opening its own frosted menu rather than the system
-settings app.
+Inputs, Wi-Fi and Settings sit up there as three small icons. Each one drops its own frosted menu, so you
+can change input or check which network you're on without being thrown into Android's settings.
 
 ## Will it work on my TV?
 
-It's been tested on one television. Nothing device specific lives in the code; every chipset dependent
-value is in `config.xml`.
+I've only tested it on one television. Nothing in the code is tied to a particular set, though. Everything
+that varies between TVs lives in `config.xml`.
 
 | | |
 |---|---|
@@ -62,8 +66,8 @@ value is in `config.xml`.
 | **Fire TV** | No. Fire OS won't hand Home to another launcher |
 | **Some CVTE and China market boards** | Refuse third party launchers. See upstream's notes |
 
-Set `dock_magnify` to false for upstream's stock dock with everything else intact, which is a safer
-starting point on an unfamiliar set.
+Trying it on a TV you don't know yet? Set `dock_magnify` to false. You get upstream's plain dock, and
+everything else still works.
 
 ## Setting it up for your TV
 
