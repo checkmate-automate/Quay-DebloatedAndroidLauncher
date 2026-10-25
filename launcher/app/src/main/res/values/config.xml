@@ -16,7 +16,15 @@
     </string-array>
 
     <!-- Apps pinned to the dock row at the bottom, in this order. Missing apps are skipped. -->
-    <!-- Kogan KALED50RN9220STA. The first item is a TV input rather than a package: "input:<id>[=Label]"
+    <!-- EXAMPLE CONFIG - replace these with your own television's apps and inputs.
+
+         This is the set it was developed on (a Kogan KALED50RN9220STA), kept as a worked example rather
+         than as a default anyone should ship. Find your own values with:
+             adb shell cmd package query-activities -a android.intent.action.MAIN
+                 -c android.intent.category.LEANBACK_LAUNCHER    # installed app package names
+             adb shell dumpsys tv_input                          # input ids, which differ by chipset
+
+         The first item is a TV input rather than a package: "input:<id>[=Label]"
          switches to that HDMI port. Drop the "=Fire TV" suffix and the tile takes the TV's own name for the
          input instead, including a rename made in TV settings.
          App order follows measured use on this set (YouTube, Netflix and iview are the three in daily use). -->
