@@ -1,10 +1,9 @@
-# Kogan Home
+# Quay — this television
 
-A fork of [Gathin23/cleanyourtv](https://github.com/Gathin23/cleanyourtv) for the
-**Kogan KALED50RN9220STA** (Android TV 11, MediaTek m7332, 32-bit ARM, 1.37 GB RAM).
+Device notes for the set this was built on, a **Kogan KALED50RN9220STA** (Android TV 11, MediaTek m7332, 32-bit ARM, 1.37 GB RAM).
 
-Upstream base: `cc4c7c5`. Everything here lives on the `kogan-home` branch; `git diff main` shows
-the whole change.
+The project README is one level up. This file is the device log: what is true of this particular
+television, and the commands that were actually run on it.
 
 ## What this fork adds
 
@@ -26,7 +25,7 @@ Switched on by `dock_magnify` in `config.xml`. Set it false and the stock tvOS d
 | | |
 |---|---|
 | Fire Stick | `com.mediatek.tvinput/.hdmi.HDMIInputService/HW8` (HDMI 4) |
-| ADB | `<tv-ip>:5555` |
+| ADB | `<tv-ip>:5555` (set a DHCP reservation; DIAL rediscovers, ADB does not) |
 | Stock launcher | `com.google.android.tvlauncher` — disabled, **not** uninstalled |
 
 The Fire Stick is on **HDMI 4 / HW8**, not HDMI 3. HW8 is the only HDMI that ever reports `state: 0`;
@@ -78,8 +77,8 @@ Not in the APK — the launcher reads its theme directory, which ADB can write t
 
 ```bash
 DIR=/sdcard/Android/data/com.gathin.tvhome/files
-adb push kogan/wallpaper.jpg $DIR/wallpaper.jpg
-adb push kogan/config.json   $DIR/config.json
+adb push quay/wallpaper.jpg $DIR/wallpaper.jpg
+adb push quay/config.json   $DIR/config.json
 adb shell am force-stop com.gathin.tvhome
 ```
 

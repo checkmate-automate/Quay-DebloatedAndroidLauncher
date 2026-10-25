@@ -21,4 +21,4 @@ launcher/hs_err_pid*.log
 launcher/replay_pid*.log
 
 # Built APK: regenerate with gradlew assembleRelease
-kogan/app-release.apk
+quay/app-release.apk
