@@ -83,7 +83,7 @@ adb shell am force-stop com.gathin.tvhome
 ```
 
 `config.json` overlays `config.xml` and only overrides the keys it names. It currently sets
-`wallpaper_dim: 34`, which keeps the clock and pills legible against the bright sky.
+`wallpaper_dim: 16`, enough to hold the clock and pills against the bright sky without flattening it.
 
 **These files do not survive a factory reset or Clear data on the launcher.** Re-push them.
 

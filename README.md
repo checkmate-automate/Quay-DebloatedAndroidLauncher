@@ -4,8 +4,9 @@
 
 ![Before and after](quay/screenshots/before-after.jpg)
 
-The television this was built for opened on an advertisement for Ralph Lauren, above a row called *Mega
-Movie Week*, above *Trending on Google*. The apps I actually used were below the fold.
+The television this was built for opens on a film it wants to sell me, above a row called *Mega Movie
+Week*, above *Top Selling Movies*, above *Trending on Google*. My own apps get one row in the middle
+of all that.
 
 Quay is a dock, a clock, and whatever's playing.
 
