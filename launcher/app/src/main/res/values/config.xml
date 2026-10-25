@@ -20,10 +20,15 @@
          switches to that HDMI port. Drop the "=Fire TV" suffix and the tile takes the TV's own name for the
          input instead, including a rename made in TV settings.
          App order follows measured use on this set (YouTube, Netflix and iview are the three in daily use). -->
+    <!-- DIAL application URL of the device a tile's "dial:" option targets, e.g.
+         http://192.168.1.50:8009/apps/ . Leave empty to find it by SSDP on first use and remember it; the
+         launcher rediscovers automatically if the device moves, so empty is the better default. -->
+    <string name="dial_app_url" translatable="false"></string>
+
     <string-array name="dock_apps">
         <item>input:com.mediatek.tvinput/.hdmi.HDMIInputService/HW8=Fire TV</item>
         <item>com.google.android.youtube.tv</item>
-        <item>com.netflix.ninja</item>
+        <item>input:com.mediatek.tvinput/.hdmi.HDMIInputService/HW8=Netflix|dial:Netflix|icon:ic_app_tile</item>
         <item>au.net.abc.iview</item>
         <item>com.disney.disneyplus</item>
         <item>com.swm.live</item>

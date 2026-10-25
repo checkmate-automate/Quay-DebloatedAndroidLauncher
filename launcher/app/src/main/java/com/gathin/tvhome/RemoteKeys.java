@@ -151,9 +151,12 @@ final class RemoteKeys {
      *  and both the dock tile and a mapped remote button resolve the same id. */
     static String inputId(String target) {
         if (target == null || !target.startsWith("input:")) return null;
-        String id = target.substring("input:".length()).trim();
+        String id = target.substring("input:".length());
+        int bar = id.indexOf('|');
+        if (bar >= 0) id = id.substring(0, bar);
         int eq = id.indexOf('=');
-        if (eq >= 0) id = id.substring(0, eq).trim();
+        if (eq >= 0) id = id.substring(0, eq);
+        id = id.trim();
         return id.isEmpty() ? null : id;
     }
 
@@ -162,8 +165,30 @@ final class RemoteKeys {
         if (target == null || !target.startsWith("input:")) return null;
         int eq = target.indexOf('=');
         if (eq < 0) return null;
-        String label = target.substring(eq + 1).trim();
+        String label = target.substring(eq + 1);
+        int bar = label.indexOf('|');
+        if (bar >= 0) label = label.substring(0, bar);
+        label = label.trim();
         return label.isEmpty() ? null : label;
+    }
+
+    /**
+     * An option appended to a dock key as "|name:value", e.g.
+     * {@code input:<id>=Netflix|dial:Netflix|icon:com.netflix.ninja}. Options are how a tile says more than
+     * which input it opens: which app to start on the device plugged into that input, and whose icon to wear.
+     * Unknown options are ignored, so a key written for a later version still resolves its input here.
+     */
+    static String option(String target, String name) {
+        if (target == null || name == null) return null;
+        String want = name + ":";
+        for (String part : target.split("[|]")) {
+            String p = part.trim();
+            if (p.regionMatches(true, 0, want, 0, want.length())) {
+                String value = p.substring(want.length()).trim();
+                if (!value.isEmpty()) return value;
+            }
+        }
+        return null;
     }
 
     /** Opens an app from a remote button: its TV entry if it has one, else its phone entry. An "input:<id>" target

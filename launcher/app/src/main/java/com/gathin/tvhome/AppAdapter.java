@@ -79,6 +79,8 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         final String name;
         /** TV input id this tile switches to; null for every kind but INPUT. */
         final String inputId;
+        /** DIAL app to start on whatever is plugged into that input, once switched; null for none. */
+        String dialApp;
         /** Ambient glow colour; 0 until sampled from the banner, or the card's accent from the start. */
         int ambient;
 
@@ -384,10 +386,32 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             if (inputId == null) continue;
             String label = RemoteKeys.inputLabel(key);
             if (label == null) label = inputName(inputId);
-            fresh.add(new Entry(Entry.INPUT, label,
+            // "icon:<package>" lets the tile wear that app's own icon instead of the HDMI mark, so a tile
+            // that opens Netflix on the device downstream looks like Netflix rather than like an input.
+            Drawable tileIcon = null;
+            String iconRef = RemoteKeys.option(key, "icon");
+            if (iconRef != null) {
+                if (iconRef.indexOf('.') >= 0) {
+                    // A package name: wear that app's own icon, while it is installed here.
+                    try {
+                        tileIcon = pm.getApplicationIcon(iconRef);
+                    } catch (PackageManager.NameNotFoundException ignored) {
+                        // not installed; fall through to the bundled drawable or the input mark
+                    }
+                }
+                if (tileIcon == null) {
+                    // Otherwise a drawable bundled with the launcher, which is what a tile needs when the app
+                    // it opens lives on another device and was removed from this one.
+                    int res = ctx.getResources().getIdentifier(iconRef, "drawable", ctx.getPackageName());
+                    if (res != 0) tileIcon = ctx.getDrawable(res);
+                }
+            }
+            if (tileIcon == null) tileIcon = ctx.getDrawable(R.drawable.ic_input_tile);
+            Entry input = new Entry(Entry.INPUT, label,
                     new ComponentName(ctx, "tv-input-" + inputId.replaceAll("[^A-Za-z0-9]", "_")),
-                    null, ctx.getDrawable(R.drawable.ic_input_tile), null,
-                    INPUT_TILE_GLOW, inputId, key));
+                    null, tileIcon, null, INPUT_TILE_GLOW, inputId, key);
+            input.dialApp = RemoteKeys.option(key, "dial");
+            fresh.add(input);
         }
         Collections.sort(fresh, (a, b) -> {
             // The owner's own order first; tiles it does not know (new installs) follow by the rule below.
@@ -801,6 +825,11 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         if (e.kind == Entry.INPUT) {
             // The same passthrough switch a mapped remote button makes, so there is one code path to trust.
             RemoteKeys.launch(ctx, "input:" + e.inputId);
+            // Then, if the key named one, start that app on the device plugged into the input. The switch
+            // has already happened, so a DIAL failure leaves the owner on the right port, not nowhere.
+            if (e.dialApp != null) {
+                DialClient.launch(ctx, e.dialApp, ctx.getString(R.string.dial_app_url));
+            }
             if (advancedEffects && !reducedMotion && ctx instanceof Activity) {
                 ((Activity) ctx).overridePendingTransition(R.anim.app_open_enter, R.anim.app_open_exit);
             }

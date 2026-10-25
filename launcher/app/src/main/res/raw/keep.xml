@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- app_banners names drawables at run time, which resource shrinking cannot see: keep every banner_*. -->
+<!-- A tile may name its icon as a string in config.xml ("icon:ic_app_tile"), resolved with
+     getIdentifier at runtime. The resource shrinker cannot see a lookup by name, so without this it strips
+     the drawable and the tile silently falls back to the generic input mark. -->
 <resources xmlns:tools="http://schemas.android.com/tools"
-    tools:keep="@drawable/banner_*" />
+    tools:keep="@drawable/ic_app_tile,@drawable/ic_input_tile" />
