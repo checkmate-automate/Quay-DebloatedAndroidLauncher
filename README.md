@@ -225,6 +225,11 @@ Working on this with a coding agent? [AGENTS.md](AGENTS.md) is the guide for it,
 This fork keeps that licence and copyright (see [LICENSE](LICENSE)) and isn't affiliated with or endorsed
 by that project.
 
-Kogan, Amazon, Fire TV, Netflix, Spotify and Android TV are the trademarks of their respective owners. No
-third party artwork is distributed here. The tile icons are placeholders, and a tile borrows a real icon
-from an app installed on your own device at runtime via `icon:<package>`.
+The clock and labels are set in Outfit, under the SIL Open Font License, see
+[launcher/FONT-LICENSE-OFL.txt](launcher/FONT-LICENSE-OFL.txt).
+
+Kogan, Amazon, Fire TV, Netflix, Spotify and Android TV are the trademarks of their respective owners.
+The launcher bundles no third party artwork: the tile icons are placeholders, and a tile borrows a real
+icon from an app installed on your own device at runtime via `icon:<package>`. Elsewhere in the repo,
+`docs/press/` holds the wordmarks of the outlets that covered upstream, which came with the fork and
+belong to those outlets.
