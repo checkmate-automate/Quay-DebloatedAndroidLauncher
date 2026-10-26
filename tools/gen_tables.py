@@ -186,7 +186,10 @@ def stats(text, entries, root):
     return text
 
 
-OWNED = ("README.md", "examples/README.md", "tools/readme_stats.py")
+# This fork keeps its own front page; upstream's, which carries the generated tables, is
+# README-upstream.md. Only the name differs, so the tool and its tests work off this constant.
+FRONT = "README-upstream.md"
+OWNED = (FRONT, "examples/README.md", "tools/readme_stats.py")
 
 
 def render(root, texts=None):
@@ -195,12 +198,12 @@ def render(root, texts=None):
     texts, if given, stands in for what those files hold now (by the same paths)."""
     entries = load(root)
     now = {p: (texts or {}).get(p) or (root / p).read_text(encoding="utf-8") for p in OWNED}
-    readme = between(now["README.md"], "tv-brands", brand_lines(entries), "README.md")
-    readme = between(readme, "tv-table", readme_rows(entries), "README.md")
+    readme = between(now[FRONT], "tv-brands", brand_lines(entries), FRONT)
+    readme = between(readme, "tv-table", readme_rows(entries), FRONT)
     readme = counts(readme, entries, root)
     examples = between(now["examples/README.md"], "tv-table", examples_rows(entries), "examples/README.md")
     stats_py = stats(now["tools/readme_stats.py"], entries, root)
-    return {"README.md": readme, "examples/README.md": examples, "tools/readme_stats.py": stats_py}
+    return {FRONT: readme, "examples/README.md": examples, "tools/readme_stats.py": stats_py}
 
 
 def stale(root):
