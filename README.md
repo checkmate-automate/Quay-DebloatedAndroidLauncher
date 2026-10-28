@@ -34,6 +34,8 @@ Everything has a purpose. Every animation feels intentional. Nothing is fighting
 
 Forget endless grids of tiny app icons.
 
+![The Quay dock in motion](quay/media/quay-dock.gif)
+
 Quay features a floating, animated dock inspired by the macOS Dock.
 
 As you navigate, the selected app smoothly magnifies while neighbouring icons shift aside to make room.
@@ -82,6 +84,8 @@ Quickly access your HDMI inputs, check your Wi-Fi connection or open settings wi
 Everything opens in a compact, frosted-glass panel that matches the rest of Quay.
 
 Simple, accessible and always where you'd expect it.
+
+A longer clip, including the inputs menu, is at [quay/media/quay-demo.mp4](quay/media/quay-demo.mp4).
 
 ---
 
