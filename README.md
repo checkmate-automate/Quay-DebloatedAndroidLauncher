@@ -1,235 +1,464 @@
 # Quay
 
-**Your TV came with a home screen that sells to you. This one doesn't.**
+### Your TV. Your apps. Nothing in the way.
 
-![Before and after](quay/screenshots/before-after.jpg)
+**A beautifully minimal Android TV launcher that puts your content first. No ads, no recommendations, no clutter. Just a better way to use your TV.**
 
-The television this was built for opens on a film it wants to sell me, above a row called *Mega Movie
-Week*, above *Top Selling Movies*, above *Trending on Google*. My own apps get one row in the middle
-of all that.
+![Quay Before and After](quay/screenshots/before-after.jpg)
 
-Quay is a dock, a clock, and whatever's playing.
+Modern smart TVs have a strange idea of what a home screen should be.
 
-## The dock
+Sponsored movies. Trending shows. Recommendations you never asked for. Endless rows of content competing for your attention.
 
-![Quay](quay/screenshots/after.jpg)
+And somewhere in the middle of it all, the apps you actually want to use.
 
-Icons sit in a tight row at the bottom of the screen. The focused one grows and the icons beside it move
-aside to make room. Thirteen apps fit in a window of five that slides as you move along, so the dock never
-becomes a grid.
+**Quay changes that.**
 
-The tiles move on springs, so it keeps up when you hold a direction down.
+Inspired by the simplicity of Apple TV and the fluid animations of modern desktop interfaces, Quay replaces the traditional Android TV home screen with something cleaner, faster and a lot more enjoyable.
 
-## Glass
+A floating dock. Beautiful glass effects. A bold clock. Your music. Your apps.
 
-Every icon sits on a pane of glass that bends the wallpaper behind it, with a highlight along the top
-edge.
+That's it.
 
-Android has no backdrop blur below API 31, and a 1 GB television can't afford one per frame. A wallpaper
-doesn't move, though, so it's blurred once into a 64 pixel bitmap of about 8 KB, and each tile samples the
-slice behind it and magnifies it. That's real refraction on Android 8.0 and up, for the cost of 8 KB.
+---
 
-## Open an app on your streaming stick
+## A home screen worth coming home to
 
-Add `dial:Netflix` to an input tile. Press it, and the TV jumps to HDMI 4 while Netflix opens on the Fire
-Stick plugged in there. You watch on the box with the better chip and the better Wi-Fi, rather than the
-television's own sluggish copy.
+![Quay Home Screen](quay/screenshots/after.jpg)
 
-It uses [DIAL](http://www.dial-multiscreen.org/), the protocol your phone uses to send Netflix to a TV. No
-ADB, no debugging left enabled, no open port, and nothing to re-pair after an update.
+Quay is designed around one simple idea: your TV should get out of the way and let you enjoy what you came to watch.
 
-DIAL only reaches apps that register a DIAL name. On Fire OS that's Netflix and little else.
+Everything has a purpose. Every animation feels intentional. Nothing is fighting for your attention.
 
-## Now playing
+### A dock that feels alive
 
-Whatever's playing turns up under the clock: cover art, the track, who it's by, and buttons to pause or
-skip. It isn't tied to Spotify, so anything that plays audio shows up the same way.
+Forget endless grids of tiny app icons.
 
-When you've had enough of it, the note in the top bar clears it off the screen and takes the music with
-it.
+Quay features a floating, animated dock inspired by the macOS Dock.
 
-## Top bar
+As you navigate, the selected app smoothly magnifies while neighbouring icons shift aside to make room.
 
-Inputs, Wi-Fi and Settings sit up there as three small icons. Each one drops its own frosted menu, so you
-can change input or check which network you're on without being thrown into Android's settings.
+The dock follows your selection, keeping your favourite apps within reach without filling the screen.
 
-## Will it work on my TV?
+Under the hood, spring-based animations make navigation feel natural and responsive, even when holding down the remote.
 
-I've only tested it on one television. Nothing in the code is tied to a particular set, though. Everything
-that varies between TVs lives in `config.xml`.
+**Small details. Big difference.**
 
-| | |
-|---|---|
-| **Android TV 8.0+** | Yes. Plain Java, two AndroidX libraries |
-| **Any chipset** | Input ids differ by vendor, but they're config |
-| **Google TV** | Should work. Different launcher package to disable |
-| **Streaming boxes** | Runs, but has no HDMI inputs to point at |
-| **Fire TV** | No. Fire OS won't hand Home to another launcher |
-| **Some CVTE and China market boards** | Refuse third party launchers. See upstream's notes |
+### Glass, without the performance hit
 
-Trying it on a TV you don't know yet? Set `dock_magnify` to false. You get upstream's plain dock, and
-everything else still works.
+Each dock icon floats on a translucent glass tile, complete with subtle refraction, highlights and depth.
 
-## Setting it up for your TV
+The effect looks like something you'd expect from a modern, high-end interface.
 
-`launcher/app/src/main/res/values/config.xml` ships as a worked example for the set it was built on.
-Replace it with yours:
+But there's a clever trick behind it.
+
+Instead of calculating expensive blur effects every frame, Quay processes the wallpaper once and uses a tiny precomputed texture to create the illusion of refracted glass.
+
+The result?
+
+Beautiful glass effects that work on older Android TV hardware, without needing a powerful GPU.
+
+### Your music, right where it belongs
+
+Quay includes a clean, integrated Now Playing display.
+
+When you're listening to music, the home screen comes alive with:
+
+* Album artwork
+* Song title and artist
+* Playback controls
+* A subtle, uncluttered presentation beneath the clock
+
+It works through Android's media session system, so it isn't tied to any particular music service.
+
+Whether you're listening to Spotify or another compatible media app, your music feels like part of the interface.
+
+### Less searching. More watching.
+
+The top bar keeps essential controls just one click away.
+
+Quickly access your HDMI inputs, check your Wi-Fi connection or open settings without navigating through Android's usual maze of menus.
+
+Everything opens in a compact, frosted-glass panel that matches the rest of Quay.
+
+Simple, accessible and always where you'd expect it.
+
+---
+
+## One dock. Multiple devices.
+
+### Launch apps on your Fire TV Stick
+
+Why use the TV's slower built-in apps when you already have a better streaming device plugged in?
+
+Quay can bridge the gap.
+
+Configure a dock tile for Netflix on your Fire TV Stick, and selecting it can:
+
+1. Switch your television to the correct HDMI input.
+2. Send a launch request to Netflix on the connected device.
+
+No need to navigate between two separate home screens.
+
+Quay uses the [DIAL protocol](http://www.dial-multiscreen.org/) to communicate with compatible streaming devices over your local network.
+
+There's no need to leave ADB debugging enabled or manually reconnect after every update.
+
+**Compatibility note:** DIAL support depends on the streaming device and individual app. Netflix is the primary supported example on Fire OS; not every app can be launched this way.
+
+---
+
+## Built for TVs that aren't brand new
+
+You shouldn't need to buy a new television just to get a decent home screen.
+
+Quay is designed to be lightweight, with compatibility and performance in mind.
+
+The release APK is approximately **534 KB**, and the launcher avoids heavyweight frameworks and unnecessary background services.
+
+The interface is built with native Android views, lightweight animations and carefully optimised visual effects.
+
+### Compatibility
+
+| Platform                     | Support                                                        |
+| ---------------------------- | -------------------------------------------------------------- |
+| Android TV 8.0+              | Supported target                                               |
+| Android TV 9, 10, 11+        | Expected to work                                               |
+| Google TV                    | Expected to work, with launcher-specific setup                 |
+| MediaTek and other chipsets  | Hardware-specific input configuration may be required          |
+| Android TV streaming boxes   | Launcher functionality available; HDMI switching may not apply |
+| Amazon Fire TV               | Not supported as a replacement Home launcher                   |
+| Some manufacturer-locked TVs | May restrict third-party launchers                             |
+
+Quay has currently been tested on one television, so compatibility across other models hasn't been fully verified.
+
+If you're trying it on new hardware, the dock's magnification effect can also be disabled while testing.
+
+---
+
+## Make Quay yours
+
+Quay isn't designed around one specific television or collection of apps.
+
+You can customise the dock, wallpaper, HDMI shortcuts, visual effects and more.
+
+### Your apps, your order
+
+Add your favourite apps to the dock and arrange them however you like.
+
+You can mix installed Android applications with HDMI inputs and supported streaming-device shortcuts.
+
+For example, your dock could contain:
+
+**Fire TV · Netflix · YouTube · Spotify · HDMI 1 · Settings**
+
+No imposed app categories. No sponsored positions. No algorithms deciding what belongs on your home screen.
+
+### Custom wallpapers
+
+Give Quay a completely different personality with your own wallpaper.
+
+Choose something colourful, cinematic, abstract or beautifully minimal.
+
+The glass dock and ambient colour effects help the interface blend naturally with your background.
+
+### Fine-tune the experience
+
+Want the dock animations to feel snappier?
+
+Prefer larger icons or a more subtle glass effect?
+
+Quay exposes several settings that let you adjust the interface to suit your preferences.
+
+---
+
+# Getting started
+
+Quay is an Android TV launcher that you build and install using Android Debug Bridge (ADB).
+
+You'll need a computer with ADB, a compatible Android TV device and developer debugging enabled.
+
+### 1. Clone the repository
 
 ```bash
-# your installed apps
-adb shell cmd package query-activities -a android.intent.action.MAIN \
-    -c android.intent.category.LEANBACK_LAUNCHER | grep packageName
-
-# your HDMI inputs, whose ids differ by chipset
-adb shell dumpsys tv_input | grep inputId
-
-# which launcher currently owns Home, so you know what to disable
-adb shell cmd package resolve-activity --brief \
-    -a android.intent.action.MAIN -c android.intent.category.HOME
+git clone https://github.com/checkmate-automate/Quay-DebloatedAndroidLauncher.git
+cd Quay-DebloatedAndroidLauncher
 ```
 
-Then:
+### 2. Configure your TV
+
+The main configuration file is located at:
+
+```text
+launcher/app/src/main/res/values/config.xml
+```
+
+This controls the apps shown in your dock, HDMI inputs and supported launcher options.
+
+The included configuration is an example from the original development television, so you'll want to update it for your own setup.
+
+**Find your installed TV apps:**
+
+```bash
+adb shell cmd package query-activities \
+  -a android.intent.action.MAIN \
+  -c android.intent.category.LEANBACK_LAUNCHER
+```
+
+**Find your HDMI input identifiers:**
+
+```bash
+adb shell dumpsys tv_input
+```
+
+HDMI identifiers differ between manufacturers and chipsets, so make sure you use the values reported by your device.
+
+### 3. Customise your dock
+
+Your dock configuration lives in `config.xml`.
+
+Here's an example:
 
 ```xml
 <string-array name="dock_apps">
-    <item>input:com.mediatek.tvinput/.hdmi.HDMIInputService/HW8=Fire TV</item>
-    <item>input:…/HW8=Netflix|dial:Netflix|icon:ic_app_tile</item>
     <item>com.google.android.youtube.tv</item>
+    <item>input:YOUR_HDMI_INPUT=Fire TV</item>
+    <item>input:YOUR_HDMI_INPUT=Netflix|dial:Netflix|icon:ic_app_tile</item>
 </string-array>
+
 <integer name="columns">9</integer>
 ```
 
-A plain package name is an app tile. An `input:` key is a TV input, and takes options after `|`:
+Replace `YOUR_HDMI_INPUT` with the identifier returned by your television.
 
-| Key | Does |
-|---|---|
-| `input:<id>` | Switch to this TV input |
-| `=<Label>` | Name the tile. Without it the TV's own name is used, including a rename made in TV settings |
-| `\|dial:<App>` | After switching, start this DIAL app on the device plugged in there |
-| `\|icon:<x>` | A package to borrow an icon from, or a drawable bundled with the launcher |
+Each entry supports different behaviour:
 
-Unknown options are ignored, so a key written for a later version still resolves its input.
+| Configuration     | Purpose                                          |
+| ----------------- | ------------------------------------------------ |
+| `com.example.app` | Launch an installed Android application          |
+| `input:<id>`      | Switch to an HDMI or TV input                    |
+| `=<Label>`        | Give an input a custom display name              |
+| `\|dial:<App>`    | Launch a compatible app on the connected device  |
+| `\|icon:<name>`   | Use a custom drawable or an installed app's icon |
 
-`columns` sets the grid's span count and the number of dock slots. Tiles are sized from their cell, so it
-also controls how large the icons are.
+The `columns` setting controls dock capacity and influences icon sizing.
 
-## Build
+### 4. Build Quay
 
-JDK 17, Android SDK platform 34, build-tools 34.0.0.
+You'll need:
+
+* JDK 17
+* Android SDK Platform 34
+* Android Build Tools 34.0.0
+
+From the repository directory:
 
 ```bash
 cd launcher
 ./gradlew --no-daemon lintRelease assembleRelease
-# -> app/build/outputs/apk/release/app-release.apk   (about 495 KB)
 ```
 
-## Install
+Your APK will be generated at:
+
+```text
+launcher/app/build/outputs/apk/release/app-release.apk
+```
+
+### 5. Install it on your TV
+
+Make sure your TV and computer are connected to the same network and ADB debugging is enabled.
+
+Connect to the television:
 
 ```bash
-adb connect <tv-ip>:5555
-adb install -r launcher/app/build/outputs/apk/release/app-release.apk
+adb connect <TV_IP_ADDRESS>:5555
+```
 
-# Home won't move while the stock launcher is enabled. set-home-activity returns
-# Success and Home still resolves to the old one, so disable it first.
+Install Quay:
+
+```bash
+adb install -r app/build/outputs/apk/release/app-release.apk
+```
+
+Then set Quay as your preferred Home launcher.
+
+First, identify your existing launcher:
+
+```bash
+adb shell cmd package resolve-activity --brief \
+  -a android.intent.action.MAIN \
+  -c android.intent.category.HOME
+```
+
+If your device permits third-party launchers, you can set Quay as Home:
+
+```bash
+adb shell cmd package set-home-activity --user 0 \
+  com.gathin.tvhome/.MainActivity
+```
+
+Some televisions require the manufacturer's launcher to be disabled before the change takes effect.
+
+For example, on a device using the standard Google Android TV launcher:
+
+```bash
 adb shell pm disable-user --user 0 com.google.android.tvlauncher
-adb shell cmd package set-home-activity --user 0 com.gathin.tvhome/.MainActivity
+```
 
-# AOT compile. Cold start went from 2.78 s to 764 ms on the test set.
-# Re-run after every install.
+Only disable a launcher after confirming its package name and that Quay is installed and launchable.
+
+You can optionally compile Quay ahead of time to improve startup performance:
+
+```bash
 adb shell cmd package compile -m speed -f com.gathin.tvhome
 ```
 
-To undo. `disable-user` is not an uninstall, so this restores the stock launcher completely and survives a
-reboot:
+This optimisation may need to be repeated after installing an updated APK.
+
+### 6. Add your wallpaper
+
+Quay loads its wallpaper and runtime configuration from its external files directory.
+
+From the repository root:
 
 ```bash
-adb shell pm enable --user 0 com.google.android.tvlauncher
-adb shell cmd package set-home-activity --user 0 com.google.android.tvlauncher/.MainActivity
+adb push quay/wallpaper.jpg \
+  /sdcard/Android/data/com.gathin.tvhome/files/wallpaper.jpg
+
+adb push quay/config.json \
+  /sdcard/Android/data/com.gathin.tvhome/files/config.json
 ```
 
-## Two one-time setup steps
-
-Neither survives a factory reset or a `pm clear`, and both fail quietly.
-
-**The wallpaper** is read from the launcher's own directory rather than packaged with it:
+Restart the launcher to apply your changes:
 
 ```bash
-DIR=/sdcard/Android/data/com.gathin.tvhome/files
-adb push quay/wallpaper.jpg $DIR/wallpaper.jpg
-adb push quay/config.json   $DIR/config.json
 adb shell am force-stop com.gathin.tvhome
 ```
 
-**The now playing strip** needs an enabled notification listener, which is what Android gates
-`getActiveSessions` behind:
+### 7. Enable Now Playing
+
+To let Quay display music and playback controls, enable its Android notification listener:
 
 ```bash
-adb shell cmd notification allow_listener com.gathin.tvhome/com.gathin.tvhome.MediaListener
+adb shell cmd notification allow_listener \
+  com.gathin.tvhome/com.gathin.tvhome.MediaListener
 ```
 
-## Tuning
+This gives Quay access to compatible active media sessions.
 
-| Constant | File | Does |
-|---|---|---|
-| `DOCK_MAGNIFY` | `AppAdapter.java` | Focused icon and its two neighbours: `{1.42, 1.16, 1.05}` |
-| `DOCK_WINDOW` | `AppAdapter.java` | 2 gives five icons at full strength, 3 gives seven |
-| `DOCK_EDGE_ALPHA` | `AppAdapter.java` | 0.28, the faded icons at the window's edge |
-| `DOCK_EDGE_SCALE` | `AppAdapter.java` | 0.86, how far those shrink back |
-| `DOCK_STIFFNESS` | `AppAdapter.java` | 380, spring speed. Critically damped, no bounce |
-| `DOCK_GAP_DP` | `AppAdapter.java` | 12, space between packed icons |
-| `LENS` | `GlassTile.java` | 1.10, how hard the glass bends what's behind it. 1.0 is a flat window |
-| `AMBIENT_ALPHA` | `MainActivity.java` | 0.18, the focused app's colour wash over the wallpaper |
-| `dock_magnify` | `config.xml` | false restores the stock tvOS dock |
+---
 
-## Notes for anyone building on Android TV
+## Personalise the details
 
-**`settings put enabled_notification_listeners` doesn't bind anything.** The value saves and `dumpsys`
-shows the service, but NotificationManagerService never re-reads the setting. Use
-`cmd notification allow_listener`.
+Want to experiment with the interface?
 
-**A notification listener must be `exported="true"`.** The system binds it from outside the app, and
-`BIND_NOTIFICATION_LISTENER_SERVICE` is what protects it. With `exported="false"` the bind fails silently.
+These are some of the settings worth exploring.
 
-**`adb uninstall` reports `Success` on a system app without removing it.** It strips the update and leaves
-the factory copy installed and launchable. `pm uninstall --user 0` removes it for the user.
+| Setting           | Location            | What it changes                               |
+| ----------------- | ------------------- | --------------------------------------------- |
+| `DOCK_MAGNIFY`    | `AppAdapter.java`   | How much focused and neighbouring icons grow  |
+| `DOCK_WINDOW`     | `AppAdapter.java`   | Number of icons shown around the selection    |
+| `DOCK_EDGE_ALPHA` | `AppAdapter.java`   | Transparency of icons at the dock edges       |
+| `DOCK_EDGE_SCALE` | `AppAdapter.java`   | Size of icons towards the edges               |
+| `DOCK_STIFFNESS`  | `AppAdapter.java`   | Speed and responsiveness of spring animations |
+| `DOCK_GAP_DP`     | `AppAdapter.java`   | Spacing between dock icons                    |
+| `LENS`            | `GlassTile.java`    | Strength of the glass refraction effect       |
+| `AMBIENT_ALPHA`   | `MainActivity.java` | Intensity of the ambient wallpaper colour     |
+| `dock_magnify`    | `config.xml`        | Enable or disable dock magnification          |
 
-**Televisions answer DIAL themselves**, on more than one port, offering whatever is installed locally.
-Checking which device "has the app" won't identify the right one. Skip responders answering from your own
-addresses first.
+Some settings are defined in Java and require rebuilding the APK after modification.
 
-**A standby HDMI port reports the same state as an empty one.** On this driver every port read `state: 1`
-regardless, and only `state: 0` indicates a live device. The passthrough URI will open a session on an
-empty port, so a successful switch proves nothing.
+The goal is to make experimentation easy without needing to redesign the entire launcher.
 
-**A drawable referenced only by name is stripped from release builds.** `getIdentifier` is invisible to the
-resource shrinker. Pin it in `res/raw/keep.xml`.
+---
 
-**`measure(UNSPECIFIED, UNSPECIFIED)` ignores `layout_height`** and returns the content height, which
-positions a fixed height view at half its size.
+## Going back to your original launcher
 
-**Several TV apps keep their main activity unexported** and register only `LEANBACK_LAUNCHER`, so
-`am start -n` is denied. Resolve through `queryIntentActivities` instead, which also survives an app
-renaming its activity.
+Quay doesn't require permanently removing your manufacturer's launcher.
 
-## Credit and licence
+If you've disabled the standard Google Android TV launcher, you can restore it with:
 
-The launcher this builds on, the ADB tooling and 260-odd tested debloat lists are the work of
-[**Gathin23/cleanyourtv**](https://github.com/Gathin23/cleanyourtv), MIT licensed, all of it still here and
-untouched. See [README-upstream.md](README-upstream.md), also in
-[中文](README.zh-CN.md), [日本語](README.ja.md) and [Tiếng Việt](README.vi.md). If you're here for
-debloating rather than a launcher, go there.
+```bash
+adb shell pm enable --user 0 com.google.android.tvlauncher
 
-Working on this with a coding agent? [AGENTS.md](AGENTS.md) is the guide for it, and the tests in
-`tests/` hold the repo's documentation to its word.
+adb shell cmd package set-home-activity --user 0 \
+  com.google.android.tvlauncher/.MainActivity
+```
 
-This fork keeps that licence and copyright (see [LICENSE](LICENSE)) and isn't affiliated with or endorsed
-by that project.
+For other manufacturers, substitute the appropriate launcher package and Home activity.
 
-The clock and labels are set in Outfit, under the SIL Open Font License, see
-[launcher/FONT-LICENSE-OFL.txt](launcher/FONT-LICENSE-OFL.txt).
+Your original launcher can be restored without performing a factory reset, provided its system package hasn't been removed from the firmware.
 
-Kogan, Amazon, Fire TV, Netflix, Spotify and Android TV are the trademarks of their respective owners.
-The launcher bundles no third party artwork: the tile icons are placeholders, and a tile borrows a real
-icon from an app installed on your own device at runtime via `icon:<package>`. Elsewhere in the repo,
-`docs/press/` holds the wordmarks of the outlets that covered upstream, which came with the fork and
-belong to those outlets.
+---
+
+## Under the hood
+
+Quay takes a deliberately lightweight approach.
+
+Rather than relying on a large UI framework, it uses native Android components to create an interface that feels modern without requiring modern hardware.
+
+A few of the details that make it work:
+
+**Spring-based navigation**
+
+The dock uses responsive spring animations to create smooth, natural transitions between icons.
+
+**Lightweight glass effects**
+
+Precomputed wallpaper textures provide a convincing glass appearance without demanding real-time background blur.
+
+**Native media integration**
+
+Android media sessions provide playback information and controls without tying the interface to a particular streaming service.
+
+**Flexible input handling**
+
+HDMI switching uses Android's TV input system, allowing different televisions to supply their own hardware-specific input identifiers.
+
+**DIAL integration**
+
+Compatible streaming apps can be launched over the local network without requiring ADB access to the streaming device.
+
+**Small footprint**
+
+The interface prioritises minimal dependencies, efficient rendering and low resource consumption.
+
+The result is a launcher designed to feel polished even on modest hardware.
+
+---
+
+## Built on open source
+
+Quay builds on the excellent work of [Gathin23/cleanyourtv](https://github.com/Gathin23/cleanyourtv), an open-source project focused on improving the Android TV experience.
+
+That project provides the original launcher foundation, ADB tooling and a substantial collection of tested debloating configurations.
+
+Quay builds on that foundation with its own visual identity, animated dock, glass effects, media integration and streaming-device shortcuts.
+
+If you're interested in debloating your television or exploring the original tools, check out the upstream documentation:
+
+[Original README](README-upstream.md) · [中文](README.zh-CN.md) · [日本語](README.ja.md) · [Tiếng Việt](README.vi.md)
+
+Developers and coding agents can also refer to [AGENTS.md](AGENTS.md) for repository guidance.
+
+---
+
+## Licence and acknowledgements
+
+Quay retains the MIT licence and copyright notices of its upstream project.
+
+See [LICENSE](LICENSE) for the full licence terms.
+
+The Outfit typeface used for the clock and interface labels is licensed under the SIL Open Font License. Its licence is included at:
+
+`launcher/FONT-LICENSE-OFL.txt`
+
+Third-party trademarks and service names remain the property of their respective owners.
+
+Quay is an independent project and is not affiliated with, sponsored by or endorsed by Google, Amazon, Netflix, Spotify, Kogan or the original upstream project.
+
+---
+
+### Less noise. More of what you love.
+
+**Quay. A better place to start.**
