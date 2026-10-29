@@ -1,3 +1,14 @@
 {
-  "wallpaper_dim": 16
+  "wallpaper_dim": 16,
+  "dock_apps": [
+    "input:com.mediatek.tvinput/.hdmi.HDMIInputService/HW8=Fire TV|icon:firetv.png",
+    "com.google.android.youtube.tv",
+    "input:com.mediatek.tvinput/.hdmi.HDMIInputService/HW8=Netflix|dial:Netflix|icon:netflix.png",
+    "au.net.abc.iview",
+    "com.disney.disneyplus",
+    "com.swm.live",
+    "com.mediatek.wwtv.tvcenter",
+    "com.android.vending",
+    "com.spotify.tv.android"
+  ]
 }

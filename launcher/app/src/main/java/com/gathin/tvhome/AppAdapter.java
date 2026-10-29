@@ -9,11 +9,13 @@ import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.content.res.Resources;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Outline;
 import android.graphics.PixelFormat;
 import android.graphics.Rect;
+import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.GradientDrawable;
 import android.media.tv.TvInputInfo;
@@ -39,6 +41,7 @@ import androidx.dynamicanimation.animation.SpringAnimation;
 import androidx.dynamicanimation.animation.SpringForce;
 import androidx.recyclerview.widget.RecyclerView;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -414,6 +417,12 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                     }
                 }
                 if (tileIcon == null) {
+                    // Or a picture in the launcher's own icons/ folder, pushed with adb next to the
+                    // wallpaper. A tile that opens an app on another device has no local package to borrow
+                    // from, and someone else's logo is theirs to put on their own TV, not ours to ship.
+                    tileIcon = fileIcon(ctx, iconRef);
+                }
+                if (tileIcon == null) {
                     // Otherwise a drawable bundled with the launcher, which is what a tile needs when the app
                     // it opens lives on another device and was removed from this one.
                     int res = ctx.getResources().getIdentifier(iconRef, "drawable", ctx.getPackageName());
@@ -567,6 +576,23 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     }
 
     /** Resizes a tile's icon, so a holder recycled between the dock and the grid carries the right one. */
+    /**
+     * The picture an "icon:<file>" option names, from the launcher's own icons/ folder, or null when there
+     * is none to read. One flat folder beside the wallpaper, so a separator or a parent reference in the
+     * name is a malformed key rather than a way out of it; the name is used as given and never joined blind.
+     */
+    private static Drawable fileIcon(Context ctx, String name) {
+        if (name.isEmpty() || name.indexOf('/') >= 0 || name.indexOf('\\') >= 0 || name.contains("..")) {
+            return null;
+        }
+        File dir = Config.dir(ctx);
+        if (dir == null) return null;
+        File file = new File(new File(dir, "icons"), name);
+        if (!file.isFile()) return null;
+        Bitmap bitmap = BitmapFactory.decodeFile(file.getAbsolutePath());
+        return bitmap == null ? null : new BitmapDrawable(ctx.getResources(), bitmap);
+    }
+
     private static void sizeIcon(View icon, int side, int bottomMargin) {
         ViewGroup.MarginLayoutParams lp = (ViewGroup.MarginLayoutParams) icon.getLayoutParams();
         if (lp.width == side && lp.bottomMargin == bottomMargin) return;

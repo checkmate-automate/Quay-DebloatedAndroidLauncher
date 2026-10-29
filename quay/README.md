@@ -79,11 +79,23 @@ Not in the APK — the launcher reads its theme directory, which ADB can write t
 DIR=/sdcard/Android/data/com.gathin.tvhome/files
 adb push quay/wallpaper.jpg $DIR/wallpaper.jpg
 adb push quay/config.json   $DIR/config.json
+adb shell mkdir -p $DIR/icons
+adb push quay/icons/. $DIR/icons/
 adb shell am force-stop com.gathin.tvhome
 ```
 
-`config.json` overlays `config.xml` and only overrides the keys it names. It currently sets
-`wallpaper_dim: 16`, enough to hold the clock and pills against the bright sky without flattening it.
+`config.json` overlays `config.xml` and only overrides the keys it names. It sets `wallpaper_dim: 16`,
+enough to hold the clock and pills against the bright sky without flattening it, and a `dock_apps` that
+points the two input tiles at `icons/firetv.png` and `icons/netflix.png`.
+
+`quay/icons/` is gitignored. Both pictures are the real apps' own icons, taken off this Fire Stick with
+`pm path` and `aapt dump badging`, and they belong to Amazon and Netflix: fine on a TV in this house,
+not something to publish. The tiles fall back to the generic input mark when the folder is empty, so
+the repo stays shippable without them.
+
+Neither logo can be borrowed from an app on the TV any more. `icon:<package>` reads the icon from a
+locally installed app, and Netflix was uninstalled here during the debloat; there has never been a
+Fire TV app on the TV at all. That is what `icon:<file>` exists for.
 
 **These files do not survive a factory reset or Clear data on the launcher.** Re-push them.
 

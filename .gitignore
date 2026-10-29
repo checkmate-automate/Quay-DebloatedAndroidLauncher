@@ -22,3 +22,6 @@ launcher/replay_pid*.log
 
 # Built APK: regenerate with gradlew assembleRelease
 quay/app-release.apk
+
+# Tile icons belong to whoever made them: they live on the TV, not in the repo.
+quay/icons/

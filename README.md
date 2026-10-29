@@ -243,9 +243,19 @@ Each entry supports different behaviour:
 | `input:<id>`      | Switch to an HDMI or TV input                    |
 | `=<Label>`        | Give an input a custom display name              |
 | `\|dial:<App>`    | Launch a compatible app on the connected device  |
-| `\|icon:<name>`   | Use a custom drawable or an installed app's icon |
+| `\|icon:<name>`   | A bundled drawable, an installed app's package, or a file in the TV's `icons/` folder |
 
 The `columns` setting controls dock capacity and influences icon sizing.
+
+A tile that opens an app on another device has no local app to take an icon from. Rather than ship
+other people's logos, Quay reads pictures you put in its own `icons/` folder:
+
+```bash
+adb shell mkdir -p /sdcard/Android/data/com.gathin.tvhome/files/icons
+adb push netflix.png /sdcard/Android/data/com.gathin.tvhome/files/icons/netflix.png
+```
+
+Then name the file: `input:<id>=Netflix|dial:Netflix|icon:netflix.png`.
 
 ### 4. Build Quay
 
